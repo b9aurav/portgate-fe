@@ -3,14 +3,15 @@
 import React from "react";
 import { useHighlight } from "@/context/HighlightContext";
 import { Hl } from "./HighlightCell";
-import type { AuditResponse } from "@/types/audit";
+import type { AuditDecisionLogEntry, AuditResponse } from "@/types/audit";
 
 interface DocumentViewerProps {
   data: AuditResponse;
   isFixed: boolean;
+  decisionTrail?: AuditDecisionLogEntry[];
 }
 
-export function DocumentViewer({ data, isFixed }: DocumentViewerProps) {
+export function DocumentViewer({ data, isFixed, decisionTrail = [] }: DocumentViewerProps) {
   const { activeTab, setActiveTab } = useHighlight();
 
   const tabs = [
@@ -28,11 +29,10 @@ export function DocumentViewer({ data, isFixed }: DocumentViewerProps) {
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === tab.key
+            className={`px-6 py-3 text-sm font-medium transition-colors ${activeTab === tab.key
                 ? "border-b-2 border-blue-600 text-blue-600"
                 : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
+              }`}
           >
             {tab.label}
           </button>
@@ -42,7 +42,9 @@ export function DocumentViewer({ data, isFixed }: DocumentViewerProps) {
       {/* Document Content */}
       <div className="flex-1 overflow-y-auto bg-gray-50 p-6">
         {activeTab === "po" && <PODocument data={data} />}
-        {activeTab === "inv" && <InvDocument data={data} isFixed={isFixed} />}
+        {activeTab === "inv" && (
+          <InvDocument data={data} isFixed={isFixed} decisionTrail={decisionTrail} />
+        )}
         {activeTab === "pl" && <PLDocument data={data} />}
       </div>
     </div>
@@ -162,9 +164,23 @@ function PODocument({ data }: { data: AuditResponse }) {
 // Invoice Document (Indian Tally Prime Commercial Invoice)
 // ────────────────────────────────────────────────────────────────────────────
 
-function InvDocument({ data, isFixed }: { data: AuditResponse; isFixed: boolean }) {
+function InvDocument({
+  data,
+  isFixed,
+  decisionTrail = [],
+}: {
+  data: AuditResponse;
+  isFixed: boolean;
+  decisionTrail?: AuditDecisionLogEntry[];
+}) {
   const m = data.metadata;
-  const showCertificate = isFixed || data.summary.status === "CLEAR";
+  const showCertificate =
+    isFixed ||
+    data.summary.status === "CLEAR" ||
+    data.summary.status === "VERIFIED_CLEAN" ||
+    data.summary.status === "CLEARED_WITH_EXCEPTIONS" ||
+    (data.items.length > 0 &&
+      data.items.every((it) => it.resolution_state && it.resolution_state !== "UNRESOLVED"));
 
   return (
     <div className="mx-auto max-w-5xl bg-white shadow-lg rounded border border-gray-300 p-8 space-y-4 font-mono text-sm">
@@ -253,7 +269,11 @@ function InvDocument({ data, isFixed }: { data: AuditResponse; isFixed: boolean 
           <tbody>
             {data.inv_lines.map((line, idx) => {
               const i = idx + 1;
-              const amount = line.qty * line.rate;
+              // Part 3 Fix: always use the raw `amount` field extracted from the PDF.
+              // Never recompute from qty × rate in JSX — the backend's line_total is
+              // the authoritative "printed" value, which may intentionally differ
+              // (e.g. RULE-D05 arithmetic error: 500×$9.50=$4,750 but PDF prints $4,850).
+              const amount = line.amount ?? line.qty * line.rate;
               return (
                 <tr key={idx} className="text-xs">
                   <td className="border border-gray-300 px-2 py-1">{i}</td>
@@ -325,8 +345,10 @@ function InvDocument({ data, isFixed }: { data: AuditResponse; isFixed: boolean 
         </table>
       </div>
 
-      {/* Compliance Certificate (if fixed or clear) */}
-      {showCertificate && <ComplianceCertificate data={data} />}
+      {/* Document Integrity & Decision Log (if fixed, clear, or resolved) */}
+      {showCertificate && (
+        <DocumentIntegrityDecisionLog data={data} decisions={decisionTrail} />
+      )}
 
       {/* Footer Declaration */}
       <div className="text-xs text-gray-500 pt-4 border-t border-gray-200">
@@ -440,10 +462,16 @@ function PLDocument({ data }: { data: AuditResponse }) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Compliance Certificate (shown when isFixed or status === "CLEAR")
+// Document Integrity & Decision Log (replaces former compliance certificate)
 // ────────────────────────────────────────────────────────────────────────────
 
-function ComplianceCertificate({ data }: { data: AuditResponse }) {
+function DocumentIntegrityDecisionLog({
+  data,
+  decisions = [],
+}: {
+  data: AuditResponse;
+  decisions?: AuditDecisionLogEntry[];
+}) {
   const [hash, setHash] = React.useState<string>("");
 
   React.useEffect(() => {
@@ -456,48 +484,80 @@ function ComplianceCertificate({ data }: { data: AuditResponse }) {
       const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(payload));
       const hashArray = Array.from(new Uint8Array(buffer));
       const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-      setHash(hashHex.substring(0, 16).toUpperCase());
+      setHash(hashHex.substring(0, 24).toUpperCase());
     };
     generateHash();
   }, [data]);
 
   return (
-    <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-600 rounded-lg p-4 space-y-2">
-      <div className="flex items-center gap-2">
-        <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
-          ✓
+    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-600 rounded-lg p-5 space-y-3 font-sans">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-sm">
+            ✓
+          </div>
+          <div>
+            <div className="text-sm font-bold text-emerald-950">
+              Document Integrity & Decision Log
+            </div>
+            <div className="text-xs text-emerald-700">
+              Pre-Shipment 3-Way Audit Trail & Cryptographic Decision Log — India→US Corridor
+            </div>
+          </div>
+        </div>
+        <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-white border border-emerald-300 text-emerald-800">
+          {data.summary.status}
+        </span>
+      </div>
+
+      <div className="bg-white rounded-lg p-3 text-xs font-mono space-y-1.5 border border-emerald-200">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <span className="text-gray-500">Shipment Ref:</span>{" "}
+            <span className="font-semibold text-gray-900">{data.shipment_ref}</span>
+          </div>
+          <div>
+            <span className="text-gray-500">CBP MID:</span>{" "}
+            <span className="font-semibold text-gray-900">{data.mid_code}</span>
+          </div>
         </div>
         <div>
-          <div className="text-sm font-bold text-green-900">
-            PortGate Compliance Certificate
-          </div>
-          <div className="text-xs text-green-700">
-            3-Way Pre-Shipment Audit — India→US Corridor
-          </div>
+          <span className="text-gray-500">Audit Status:</span>{" "}
+          <span className="font-semibold text-emerald-700">{data.summary.status}</span>
+        </div>
+        <div>
+          <span className="text-gray-500">SHA-256 Proof:</span>{" "}
+          <span className="font-semibold text-emerald-900 bg-emerald-50 px-1.5 py-0.5 rounded text-[11px]">
+            SHA256:{hash}
+          </span>
         </div>
       </div>
-      <div className="bg-white rounded p-2 text-xs font-mono space-y-1">
-        <div>
-          <span className="text-gray-500">Shipment Ref:</span>{" "}
-          <span className="font-semibold">{data.shipment_ref}</span>
+
+      {/* Logged Decisions Summary */}
+      {decisions.length > 0 && (
+        <div className="bg-white/80 rounded-lg p-2.5 border border-emerald-200 space-y-1">
+          <div className="text-[11px] font-bold text-emerald-900">
+            Recorded Exception & Resolution Log ({decisions.length}):
+          </div>
+          <div className="space-y-1 text-[11px] text-gray-700">
+            {decisions.map((d) => (
+              <div key={d.id} className="flex items-center justify-between border-b border-gray-100 pb-1">
+                <span className="font-semibold text-gray-800">
+                  [{d.discrepancy_id}] {d.reason_chip}
+                </span>
+                <span className="text-[10px] text-gray-400 font-mono">
+                  {d.actor_name}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div>
-          <span className="text-gray-500">MID Code:</span>{" "}
-          <span className="font-semibold">{data.mid_code}</span>
-        </div>
-        <div>
-          <span className="text-gray-500">Status:</span>{" "}
-          <span className="font-semibold text-green-700">{data.summary.status}</span>
-        </div>
-        <div>
-          <span className="text-gray-500">SHA-256 Hash:</span>{" "}
-          <span className="font-semibold text-gray-900">{hash}</span>
-        </div>
-      </div>
-      <div className="text-xs text-green-800 leading-relaxed">
-        This shipment has been verified by PortGate's deterministic compliance engine against all
-        5 rule categories. All critical discrepancies have been resolved, and the packet is cleared
-        for CBP entry filing.
+      )}
+
+      <div className="text-xs text-emerald-900 leading-relaxed">
+        This shipment packet has been evaluated by PortGate's deterministic compliance engine against all
+        Rule-1 through Rule-5 categories. All line math, tariff roots, and operational variances have been
+        substantiated and logged into this auditable chain of custody.
       </div>
     </div>
   );

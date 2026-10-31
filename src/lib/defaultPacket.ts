@@ -75,18 +75,21 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
       hsn: "6205.20.00",
       qty: 2000,
       rate: 4.50,
+      amount: 9000.00,
     },
     {
       desc: "LADIES COTTON PIQUE COLLAR T-SHIRT WHITE",
       hsn: "6106.10.00",
       qty: 2050,
       rate: 6.40,
+      amount: 13120.00,
     },
     {
       desc: "FLEECE PULLOVER HOODIE HEAVY GREY XL",
       hsn: "6110.20.00",
       qty: 1000,
       rate: 11.00,
+      amount: 11000.00,
     },
   ],
   weights: {
@@ -109,6 +112,8 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
     {
       id: "ERR-01",
       sev: "crit",
+      category: "COMPLIANCE_ADVISORY",
+      resolution_state: "UNRESOLVED",
       title: "6-digit HS root clash on Line 1",
       cells: ["inv-hsn1", "po-hts1"],
       locs: [
@@ -123,6 +128,8 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
     {
       id: "ERR-02",
       sev: "crit",
+      category: "COMMERCIAL_VARIANCE",
+      resolution_state: "UNRESOLVED",
       title: "Unit price overcharge on Line 2",
       cells: ["inv-rate2", "inv-amt2", "po-price2"],
       locs: [
@@ -136,6 +143,8 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
     {
       id: "ERR-03",
       sev: "crit",
+      category: "DETERMINISTIC_CONFLICT",
+      resolution_state: "UNRESOLVED",
       title: "Net/gross weight inversion and carton drift on Line 3",
       cells: ["inv-net3", "inv-gross3", "inv-ctns", "pl-ct3", "pl-ctns"],
       locs: [
@@ -150,6 +159,8 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
     {
       id: "WARN-01",
       sev: "warn",
+      category: "COMMERCIAL_VARIANCE",
+      resolution_state: "UNRESOLVED",
       title: "Split-shipment quantity over open balance (Line 2)",
       cells: ["inv-qty2", "po-open2"],
       locs: [
@@ -177,7 +188,7 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
     "Carton count parity: invoice 100 CTNS = packing list 108 CTNS",
   ],
   summary: {
-    status: "BLOCKED",
+    status: "ACTION_REQUIRED",
     critical_count: 3,
     warning_count: 1,
     passed_count: 13,
@@ -228,6 +239,7 @@ export function applySupplierFix(packet: AuditResponse): AuditResponse {
       hsn: fixedHSN,
       rate: fixedRate,
       qty: fixedQty,
+      amount: fixedQty * fixedRate,
     };
   });
 
@@ -268,7 +280,7 @@ export function applySupplierFix(packet: AuditResponse): AuditResponse {
     items: [], // Clear all discrepancies
     summary: {
       ...packet.summary,
-      status: "CLEAR",
+      status: "VERIFIED_CLEAN",
       critical_count: 0,
       warning_count: 0,
       passed_count: packet.summary.passed_count + packet.items.length,

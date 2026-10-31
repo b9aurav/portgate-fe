@@ -1,9 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import type { AuditResponse } from "@/types/audit";
+import type {
+  AuditDecisionLogEntry,
+  AuditResponse,
+  WorkspaceRole,
+} from "@/types/audit";
 import { useHighlight } from "@/context/HighlightContext";
-import { applySupplierFix } from "@/lib/defaultPacket";
+import { ResolutionBar } from "@/components/ResolutionBar";
+import { AuditDecisionTrail } from "@/components/AuditDecisionTrail";
 
 type Phase = "idle" | "run" | "done";
 
@@ -18,6 +23,15 @@ interface AuditSidebarProps {
   isFixed: boolean;
   setIsFixed: (fixed: boolean) => void;
   setData: (data: AuditResponse) => void;
+  viewMode?: WorkspaceRole;
+  decisionTrail?: AuditDecisionLogEntry[];
+  onResolveItem?: (
+    itemId: string,
+    action: "REQUEST_REVISION" | "ACCEPT_VARIANCE" | "ESCALATE_BROKER",
+    reasonChip: string,
+    note?: string
+  ) => void;
+  onSubmitSupplierRevision?: (itemId: string) => void;
 }
 
 export function AuditSidebar({
@@ -31,6 +45,10 @@ export function AuditSidebar({
   isFixed,
   setIsFixed,
   setData,
+  viewMode = "BUYER_WORKBENCH",
+  decisionTrail = [],
+  onResolveItem,
+  onSubmitSupplierRevision,
 }: AuditSidebarProps) {
   const { setHighlight, setActiveTab } = useHighlight();
 
@@ -107,90 +125,178 @@ export function AuditSidebar({
   }
 
   if (phase === "done" && data) {
-    const isBlocked = data.summary.status === "BLOCKED";
-    const canExport = isFixed || !isBlocked;
+    const unresolvedCritical = data.items.filter(
+      (it) =>
+        it.sev === "crit" &&
+        (!it.resolution_state ||
+          it.resolution_state === "UNRESOLVED" ||
+          it.resolution_state === "REVISION_REQUESTED")
+    ).length;
+
+    const isActionRequired =
+      unresolvedCritical > 0 ||
+      data.summary.status === "ACTION_REQUIRED" ||
+      data.summary.status === "BLOCKED";
+
+    const canExport =
+      isFixed ||
+      (!isActionRequired &&
+        (data.summary.status === "CLEARED_WITH_EXCEPTIONS" ||
+          data.summary.status === "VERIFIED_CLEAN" ||
+          data.summary.status === "CLEAR"));
+
+    const hasRevisionRequested = data.items.some(
+      (it) => it.resolution_state === "REVISION_REQUESTED"
+    );
 
     return (
-      <div className="h-full overflow-y-auto bg-white p-6 space-y-6">
-        {/* Status Summary */}
+      <div className="h-full overflow-y-auto bg-white p-5 space-y-5">
+        {/* Status Summary Banner */}
         <div
-          className={`rounded-lg p-4 ${
-            isBlocked
-              ? "bg-red-50 border-2 border-red-600"
-              : "bg-green-50 border-2 border-green-600"
+          className={`rounded-lg p-4 transition-all ${
+            isActionRequired
+              ? "bg-rose-50 border-2 border-rose-600 shadow-sm"
+              : data.summary.status === "CLEARED_WITH_EXCEPTIONS"
+              ? "bg-amber-50 border-2 border-amber-500 shadow-sm"
+              : "bg-emerald-50 border-2 border-emerald-600 shadow-sm"
           }`}
         >
-          <div
-            className={`text-xl font-bold ${isBlocked ? "text-red-900" : "text-green-900"}`}
-          >
-            {isBlocked ? "🚫 BLOCKED" : "✓ COMPLIANT"}
+          <div className="flex items-center justify-between">
+            <div
+              className={`text-lg font-bold ${
+                isActionRequired
+                  ? "text-rose-900"
+                  : data.summary.status === "CLEARED_WITH_EXCEPTIONS"
+                  ? "text-amber-900"
+                  : "text-emerald-900"
+              }`}
+            >
+              {isActionRequired
+                ? "🚫 ACTION REQUIRED"
+                : data.summary.status === "CLEARED_WITH_EXCEPTIONS"
+                ? "⚠️ CLEARED WITH EXCEPTIONS"
+                : "✓ VERIFIED CLEAN"}
+            </div>
+            <div className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/80 border border-gray-300 text-gray-700">
+              {viewMode === "SUPPLIER_PORTAL" ? "Supplier View" : "Buyer View"}
+            </div>
           </div>
-          <div className="text-sm text-gray-700 mt-1">
+          <div className="text-xs text-gray-700 mt-1">
             {data.summary.critical_count} critical · {data.summary.warning_count} warning ·{" "}
             {data.summary.passed_count} passed
+            {unresolvedCritical === 0 && data.items.length > 0 && (
+              <span className="ml-1 text-emerald-700 font-semibold">
+                (All discrepancies addressed & logged)
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Contextual Action Bar */}
         <div className="space-y-2">
-          {isBlocked && !isFixed && (
+          {/* Supplier View: Prompt to submit revision if requested */}
+          {viewMode === "SUPPLIER_PORTAL" && hasRevisionRequested && (
             <button
               type="button"
-              onClick={() => {
-                const fixed = applySupplierFix(data);
-                setData(fixed);
-                setIsFixed(true);
-              }}
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+              onClick={() => onSubmitSupplierRevision?.("ALL")}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm text-xs"
             >
-              🔧 Simulate Supplier Fix in Tally
+              <span>📤</span>
+              <span>Submit Corrected Tally Invoice & PL Revision</span>
             </button>
           )}
+
+          {/* Export Action */}
           <button
             type="button"
             onClick={onExport}
             disabled={!canExport}
-            className={`w-full font-semibold py-2 px-4 rounded-lg transition-colors ${
+            className={`w-full font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-xs shadow-sm ${
               canExport
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                ? "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
             }`}
           >
-            📦 Export CargoWise CSV & ISF (10+2)
+            <span>📦</span>
+            <span>Export Broker Handoff & ISF Worksheet</span>
           </button>
+          {!canExport && (
+            <div className="text-[11px] text-gray-500 text-center italic">
+              Resolve or sign off on all critical discrepancies to enable broker export.
+            </div>
+          )}
         </div>
 
-        {/* Discrepancies */}
+        {/* Discrepancies with Evidence-Backed Resolution Bars */}
         {data.items.length > 0 && (
           <div className="space-y-3">
-            <div className="text-sm font-bold text-gray-700">Discrepancies</div>
-            {data.items.map((item) => (
-              <div
-                key={item.id}
-                className={`border-l-4 rounded-lg p-3 cursor-pointer transition-all hover:shadow-md ${
-                  item.sev === "crit"
-                    ? "border-red-600 bg-red-50 hover:bg-red-100"
-                    : "border-amber-500 bg-amber-50 hover:bg-amber-100"
-                }`}
-                onClick={() => {
-                  setHighlight(item.id, item.cells, item.sev, item.locs[0]?.[0] || "inv");
-                  setActiveTab(item.locs[0]?.[0] || "inv");
-                }}
-              >
-                <div className="flex items-start gap-2">
-                  <div
-                    className={`text-xs font-bold px-2 py-0.5 rounded ${
-                      item.sev === "crit"
-                        ? "bg-red-600 text-white"
-                        : "bg-amber-600 text-white"
-                    }`}
-                  >
-                    {item.id}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-gray-900">{item.title}</div>
-                    <div className="text-xs text-gray-600 mt-1 line-clamp-2">{item.body}</div>
-                    <div className="flex flex-wrap gap-1 mt-2">
+            <div className="flex items-center justify-between text-xs font-bold text-gray-700">
+              <span>Discrepancies ({data.items.length})</span>
+              <span className="text-[11px] font-normal text-gray-500">
+                Click line to highlight in docs
+              </span>
+            </div>
+
+            {data.items.map((item) => {
+              const category = item.category || "DETERMINISTIC_CONFLICT";
+              const categoryBadge = {
+                DETERMINISTIC_CONFLICT: "bg-rose-100 text-rose-800 border-rose-300",
+                COMMERCIAL_VARIANCE: "bg-amber-100 text-amber-800 border-amber-300",
+                COMPLIANCE_ADVISORY: "bg-sky-100 text-sky-800 border-sky-300",
+              }[category];
+
+              return (
+                <div
+                  key={item.id}
+                  className={`border rounded-lg p-3.5 transition-all shadow-sm ${
+                    item.resolution_state === "ACCEPTED_EXCEPTION"
+                      ? "border-emerald-300 bg-emerald-50/40"
+                      : item.resolution_state === "ESCALATED_TO_BROKER"
+                      ? "border-sky-300 bg-sky-50/40"
+                      : item.resolution_state === "REVISION_REQUESTED"
+                      ? "border-purple-300 bg-purple-50/40"
+                      : item.sev === "crit"
+                      ? "border-l-4 border-l-rose-600 border-gray-200 bg-white"
+                      : "border-l-4 border-l-amber-500 border-gray-200 bg-white"
+                  }`}
+                  onClick={() => {
+                    setHighlight(item.id, item.cells, item.sev, item.locs[0]?.[0] || "inv");
+                    setActiveTab(item.locs[0]?.[0] || "inv");
+                  }}
+                >
+                  <div className="space-y-1.5">
+                    {/* Header Row: ID, Severity, Category */}
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            item.sev === "crit"
+                              ? "bg-rose-600 text-white"
+                              : "bg-amber-500 text-white"
+                          }`}
+                        >
+                          {item.id}
+                        </span>
+                        <span
+                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${categoryBadge}`}
+                        >
+                          {category.replace(/_/g, " ")}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <div className="text-xs font-semibold text-gray-900 leading-snug">
+                      {item.title}
+                    </div>
+
+                    {/* Body */}
+                    <div className="text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
+                      {item.body}
+                    </div>
+
+                    {/* Document Location Tabs */}
+                    <div className="flex flex-wrap gap-1 pt-1">
                       {item.locs.map(([key, label], idx) => (
                         <button
                           key={idx}
@@ -200,27 +306,45 @@ export function AuditSidebar({
                             setActiveTab(key);
                             setHighlight(item.id, item.cells, item.sev, key);
                           }}
-                          className="text-xs bg-white border border-gray-300 hover:bg-gray-50 px-2 py-1 rounded"
+                          className="text-[10px] bg-white border border-gray-300 hover:bg-gray-50 px-1.5 py-0.5 rounded text-gray-700 transition-colors"
                         >
-                          {label}
+                          🔍 {label}
                         </button>
                       ))}
                     </div>
+
+                    {/* The Evidence-Backed Resolution Bar */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ResolutionBar
+                        item={item}
+                        viewMode={viewMode}
+                        onResolve={(action, chip, note) => {
+                          onResolveItem?.(item.id, action, chip, note);
+                        }}
+                        onSubmitSupplierRevision={onSubmitSupplierRevision}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
+
+        {/* Audit Decision Trail Component */}
+        <AuditDecisionTrail decisions={decisionTrail} />
 
         {/* Passed Checks */}
         {data.passed.length > 0 && (
           <div className="space-y-2">
-            <div className="text-sm font-bold text-gray-700">Passed Checks</div>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-1">
+            <div className="text-xs font-bold text-gray-700 flex items-center justify-between">
+              <span>Passed Checks ({data.passed.length})</span>
+              <span className="text-[10px] text-emerald-600 font-normal">All Rules Validated</span>
+            </div>
+            <div className="bg-emerald-50/70 border border-emerald-200 rounded-lg p-3 space-y-1.5 max-h-48 overflow-y-auto">
               {data.passed.map((check, idx) => (
-                <div key={idx} className="text-xs text-green-800 flex items-start gap-2">
-                  <span className="text-green-600">✓</span>
+                <div key={idx} className="text-[11px] text-emerald-900 flex items-start gap-1.5">
+                  <span className="text-emerald-600 font-bold">✓</span>
                   <span>{check}</span>
                 </div>
               ))}
