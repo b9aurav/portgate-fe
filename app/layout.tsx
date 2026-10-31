@@ -16,6 +16,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PortGate — Pre-Shipment 3-Way Customs Compliance Engine",
   description: "Deterministic compliance auditing for India→US export shipments. Verify PO, Invoice, and Packing List against CBP rules in seconds.",
+  icons: {
+    icon: [
+      { url: "/portgate.ico" },
+      { url: "/logo.png", type: "image/png" },
+    ],
+    shortcut: "/portgate.ico",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

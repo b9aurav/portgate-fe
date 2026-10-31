@@ -50,7 +50,7 @@ function MagicLinkPopover({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-base">🔗</span>
+          <img src="/logo.png" alt="PortGate" className="w-5 h-5 rounded object-contain" />
           <span className="font-bold text-sm text-gray-900">Supplier Revision Magic Link</span>
         </div>
         <button
@@ -96,8 +96,8 @@ function MagicLinkPopover({
         type="button"
         onClick={handleCopy}
         className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${copied
-            ? "bg-emerald-600 text-white"
-            : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+          ? "bg-emerald-600 text-white"
+          : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
           }`}
       >
         {copied ? (
@@ -408,128 +408,133 @@ export default function HomePage() {
         <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-xs z-10 relative">
           {/* Left: Logo + Shipment Info */}
           <div className="flex items-center gap-5">
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-black text-blue-600 tracking-tight">PortGate</span>
-              <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">
-                v2.5
-              </span>
-              <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono border border-slate-200">
-                US Buyer Exception Workbench
-              </span>
-            </div>
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/logo.png"
+                  alt="PortGate Logo"
+                  className="w-7 h-7 rounded-lg shadow-xs object-contain"
+                />
+                <span className="text-xl font-black text-slate-900 tracking-tight">PortGate</span>
+                <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">
+                  v2.5
+                </span>
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono border border-slate-200">
+                  US Buyer Exception Workbench
+                </span>
+              </div>
 
-            <div className="h-4 w-px bg-gray-300" />
+              <div className="h-4 w-px bg-gray-300" />
 
-            {/* Shipment Reference */}
-            <div className="text-xs text-gray-600 flex items-center gap-1.5">
-              <span className="font-semibold text-gray-900 font-mono">#{data.shipment_ref}</span>
-              <span>·</span>
-              <span>
-                {m?.port_of_loading || "INMUN1"} → {m?.port_of_discharge || "USLAX"}
-              </span>
-              {auditCount > 0 && (
-                <span className="text-[10px] text-gray-400 font-mono">(audit #{auditCount})</span>
-              )}
-            </div>
+              {/* Shipment Reference */}
+              <div className="text-xs text-gray-600 flex items-center gap-1.5">
+                <span className="font-semibold text-gray-900 font-mono">#{data.shipment_ref}</span>
+                <span>·</span>
+                <span>
+                  {m?.port_of_loading || "INMUN1"} → {m?.port_of_discharge || "USLAX"}
+                </span>
+                {auditCount > 0 && (
+                  <span className="text-[10px] text-gray-400 font-mono">(audit #{auditCount})</span>
+                )}
+              </div>
 
-            {/* Overall Status Badge */}
-            <div
-              className={`px-2.5 py-1 rounded-full text-xs font-bold border ${isStatusBlocked
+              {/* Overall Status Badge */}
+              <div
+                className={`px-2.5 py-1 rounded-full text-xs font-bold border ${isStatusBlocked
                   ? "bg-rose-50 text-rose-800 border-rose-300"
                   : data.summary.status === "CLEARED_WITH_EXCEPTIONS"
                     ? "bg-amber-50 text-amber-800 border-amber-300"
                     : "bg-emerald-50 text-emerald-800 border-emerald-300"
-                }`}
-            >
-              {data.summary.status}
-            </div>
+                  }`}
+              >
+                {data.summary.status}
+              </div>
 
-            {health && (
-              <div
-                className={`hidden md:flex px-2 py-0.5 rounded text-[11px] font-medium border ${health.status === "ok"
+              {health && (
+                <div
+                  className={`hidden md:flex px-2 py-0.5 rounded text-[11px] font-medium border ${health.status === "ok"
                     ? "bg-blue-50 text-blue-700 border-blue-200"
                     : "bg-gray-100 text-gray-600 border-gray-200"
-                  }`}
-                title={`Backend: ${health.gemini_model}, Key: ${health.api_key_configured ? "✓" : "✗"}`}
+                    }`}
+                  title={`Backend: ${health.gemini_model}, Key: ${health.api_key_configured ? "✓" : "✗"}`}
+                >
+                  Engine: {health.status.toUpperCase()}
+                </div>
+              )}
+            </div>
+
+            {/* Center: Session Token & Revision Badge */}
+            <div className="flex items-center gap-3">
+              {data.session_token ? (
+                <>
+                  <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg">
+                    <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">
+                      Token
+                    </span>
+                    <span className="font-mono text-xs font-bold text-indigo-900 max-w-[120px] truncate">
+                      {data.session_token}
+                    </span>
+                  </div>
+
+                  <div className="px-2.5 py-1 rounded-full text-[11px] font-bold border bg-blue-100 text-blue-800 border-blue-300 font-mono">
+                    Revision #v{data.revision_number}
+                  </div>
+
+                  {lastSynced && (
+                    <button
+                      type="button"
+                      onClick={() => syncSession(data.session_token)}
+                      title="Click to sync latest status from supplier"
+                      className="text-[10px] text-gray-500 hover:text-gray-800 font-mono flex items-center gap-1 transition-colors"
+                    >
+                      <span className={isSyncing ? "animate-spin" : ""}>🔄</span>
+                      <span>synced {lastSynced}</span>
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="text-xs text-gray-400 italic">No active session</div>
+              )}
+            </div>
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-2 relative">
+              {/* Copy Supplier Revision Link */}
+              <button
+                type="button"
+                disabled={!data.session_token}
+                onClick={() => setShowMagicPopover((v) => !v)}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors text-xs flex items-center gap-1.5 shadow-sm"
               >
-                Engine: {health.status.toUpperCase()}
-              </div>
-            )}
-          </div>
+                <span>🔗</span>
+                <span>Copy Supplier Revision Link</span>
+              </button>
 
-          {/* Center: Session Token & Revision Badge */}
-          <div className="flex items-center gap-3">
-            {data.session_token ? (
-              <>
-                <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg">
-                  <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">
-                    Token
-                  </span>
-                  <span className="font-mono text-xs font-bold text-indigo-900 max-w-[120px] truncate">
-                    {data.session_token}
-                  </span>
-                </div>
+              {showMagicPopover && data.session_token && (
+                <MagicLinkPopover
+                  token={data.session_token}
+                  revisionNumber={data.revision_number}
+                  onClose={() => setShowMagicPopover(false)}
+                />
+              )}
 
-                <div className="px-2.5 py-1 rounded-full text-[11px] font-bold border bg-blue-100 text-blue-800 border-blue-300 font-mono">
-                  Revision #v{data.revision_number}
-                </div>
+              <button
+                type="button"
+                onClick={() => setUploadModalOpen(true)}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-1.5 px-3 rounded-lg transition-colors text-xs border border-gray-300 flex items-center gap-1"
+              >
+                <span>+</span>
+                <span>Upload 3-Document Packet</span>
+              </button>
 
-                {lastSynced && (
-                  <button
-                    type="button"
-                    onClick={() => syncSession(data.session_token)}
-                    title="Click to sync latest status from supplier"
-                    className="text-[10px] text-gray-500 hover:text-gray-800 font-mono flex items-center gap-1 transition-colors"
-                  >
-                    <span className={isSyncing ? "animate-spin" : ""}>🔄</span>
-                    <span>synced {lastSynced}</span>
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="text-xs text-gray-400 italic">No active session</div>
-            )}
-          </div>
-
-          {/* Right: Actions */}
-          <div className="flex items-center gap-2 relative">
-            {/* Copy Supplier Revision Link */}
-            <button
-              type="button"
-              disabled={!data.session_token}
-              onClick={() => setShowMagicPopover((v) => !v)}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors text-xs flex items-center gap-1.5 shadow-sm"
-            >
-              <span>🔗</span>
-              <span>Copy Supplier Revision Link</span>
-            </button>
-
-            {showMagicPopover && data.session_token && (
-              <MagicLinkPopover
-                token={data.session_token}
-                revisionNumber={data.revision_number}
-                onClose={() => setShowMagicPopover(false)}
-              />
-            )}
-
-            <button
-              type="button"
-              onClick={() => setUploadModalOpen(true)}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-1.5 px-3 rounded-lg transition-colors text-xs border border-gray-300 flex items-center gap-1"
-            >
-              <span>+</span>
-              <span>Upload 3-Document Packet</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleRunAudit(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1.5 px-3.5 rounded-lg transition-colors text-xs flex items-center gap-1.5 shadow-sm"
-            >
-              <span>⚡</span>
-              <span>Run Live 3-Way Audit</span>
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => handleRunAudit(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1.5 px-3.5 rounded-lg transition-colors text-xs flex items-center gap-1.5 shadow-sm"
+              >
+                <span>⚡</span>
+                <span>Run Live 3-Way Audit</span>
+              </button>
+            </div>
         </nav>
 
         {/* Click outside to close popover */}

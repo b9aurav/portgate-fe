@@ -57,7 +57,10 @@ export function AuditSidebar({
       <div className="h-full overflow-y-auto bg-white p-6 space-y-6">
         {/* Value Proposition */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 space-y-2">
-          <div className="text-lg font-bold text-gray-900">⚡ PortGate</div>
+          <div className="flex items-center gap-2 text-lg font-bold text-gray-900">
+            <img src="/logo.png" alt="PortGate" className="w-6 h-6 rounded-md shadow-xs object-contain" />
+            <span>PortGate Compliance Engine</span>
+          </div>
           <div className="text-sm text-gray-700 leading-relaxed">
             Pre-Shipment 3-Way Customs Compliance Engine for the India→US trade corridor. Upload your
             PO, Invoice, and Packing List to run deterministic Rule-1 through Rule-5 audits in
@@ -153,29 +156,27 @@ export function AuditSidebar({
       <div className="h-full overflow-y-auto bg-white p-5 space-y-5">
         {/* Status Summary Banner */}
         <div
-          className={`rounded-lg p-4 transition-all ${
-            isActionRequired
+          className={`rounded-lg p-4 transition-all ${isActionRequired
               ? "bg-rose-50 border-2 border-rose-600 shadow-sm"
               : data.summary.status === "CLEARED_WITH_EXCEPTIONS"
-              ? "bg-amber-50 border-2 border-amber-500 shadow-sm"
-              : "bg-emerald-50 border-2 border-emerald-600 shadow-sm"
-          }`}
+                ? "bg-amber-50 border-2 border-amber-500 shadow-sm"
+                : "bg-emerald-50 border-2 border-emerald-600 shadow-sm"
+            }`}
         >
           <div className="flex items-center justify-between">
             <div
-              className={`text-lg font-bold ${
-                isActionRequired
+              className={`text-lg font-bold ${isActionRequired
                   ? "text-rose-900"
                   : data.summary.status === "CLEARED_WITH_EXCEPTIONS"
-                  ? "text-amber-900"
-                  : "text-emerald-900"
-              }`}
+                    ? "text-amber-900"
+                    : "text-emerald-900"
+                }`}
             >
               {isActionRequired
                 ? "🚫 ACTION REQUIRED"
                 : data.summary.status === "CLEARED_WITH_EXCEPTIONS"
-                ? "⚠️ CLEARED WITH EXCEPTIONS"
-                : "✓ VERIFIED CLEAN"}
+                  ? "⚠️ CLEARED WITH EXCEPTIONS"
+                  : "✓ VERIFIED CLEAN"}
             </div>
             <div className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/80 border border-gray-300 text-gray-700">
               {viewMode === "SUPPLIER_PORTAL" ? "Supplier View" : "Buyer View"}
@@ -211,11 +212,10 @@ export function AuditSidebar({
             type="button"
             onClick={onExport}
             disabled={!canExport}
-            className={`w-full font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-xs shadow-sm ${
-              canExport
+            className={`w-full font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-xs shadow-sm ${canExport
                 ? "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                 : "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
-            }`}
+              }`}
           >
             <span>📦</span>
             <span>Export Broker Handoff & ISF Worksheet</span>
@@ -252,8 +252,8 @@ export function AuditSidebar({
               const cells: string[] = Array.isArray(item.cells)
                 ? item.cells
                 : Array.isArray(item.highlight_cells)
-                ? item.highlight_cells
-                : [];
+                  ? item.highlight_cells
+                  : [];
               const sev = item.sev || (item.severity === "CRITICAL" ? "crit" : "warn");
               const body = item.body || item.description || "";
               const defaultTab = locs[0]?.[0] || "inv";
@@ -261,17 +261,16 @@ export function AuditSidebar({
               return (
                 <div
                   key={item.id}
-                  className={`border rounded-lg p-3.5 transition-all shadow-sm ${
-                    item.resolution_state === "ACCEPTED_EXCEPTION"
+                  className={`border rounded-lg p-3.5 transition-all shadow-sm ${item.resolution_state === "ACCEPTED_EXCEPTION"
                       ? "border-emerald-300 bg-emerald-50/40"
                       : item.resolution_state === "ESCALATED_TO_BROKER"
-                      ? "border-sky-300 bg-sky-50/40"
-                      : item.resolution_state === "REVISION_REQUESTED"
-                      ? "border-purple-300 bg-purple-50/40"
-                      : sev === "crit"
-                      ? "border-l-4 border-l-rose-600 border-gray-200 bg-white"
-                      : "border-l-4 border-l-amber-500 border-gray-200 bg-white"
-                  }`}
+                        ? "border-sky-300 bg-sky-50/40"
+                        : item.resolution_state === "REVISION_REQUESTED"
+                          ? "border-purple-300 bg-purple-50/40"
+                          : sev === "crit"
+                            ? "border-l-4 border-l-rose-600 border-gray-200 bg-white"
+                            : "border-l-4 border-l-amber-500 border-gray-200 bg-white"
+                    }`}
                   onClick={() => {
                     setHighlight(item.id, cells, sev, defaultTab);
                     setActiveTab(defaultTab);
@@ -282,11 +281,10 @@ export function AuditSidebar({
                     <div className="flex items-center justify-between gap-1">
                       <div className="flex items-center gap-1.5">
                         <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            sev === "crit"
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${sev === "crit"
                               ? "bg-rose-600 text-white"
                               : "bg-amber-500 text-white"
-                          }`}
+                            }`}
                         >
                           {item.id}
                         </span>

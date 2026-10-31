@@ -34,7 +34,7 @@ export function UploadModal({ isOpen, onClose, onSuccess, tolerancePct }: Upload
 
     try {
       const formData = new FormData();
-      
+
       if (useMock) {
         // Mock mode: send dummy PDFs to satisfy FastAPI's required File() fields
         const dummyPdfContent = `%PDF-1.4
@@ -58,7 +58,7 @@ trailer<</Root 1 0 R>>
         // Should never reach here due to validation above
         throw new Error("PDF files are required");
       }
-      
+
       formData.append("tolerance_pct", customTolerance.toString());
       formData.append("mock", useMock ? "true" : "false");
 
@@ -93,7 +93,10 @@ trailer<</Root 1 0 R>>
         {/* Header */}
         <div className="border-b border-gray-200 p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">Upload PDF Packet</h2>
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="PortGate" className="w-7 h-7 rounded-lg shadow-xs object-contain" />
+              <h2 className="text-2xl font-bold text-gray-900">Upload PDF Packet</h2>
+            </div>
             <button
               type="button"
               onClick={onClose}
@@ -220,11 +223,10 @@ function FileDropzone({ label, file, onFileChange }: FileDropzoneProps) {
         onClick={() => inputRef.current?.click()}
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
-        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-          file
+        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${file
             ? "border-green-500 bg-green-50"
             : "border-gray-300 hover:border-blue-500 hover:bg-blue-50"
-        }`}
+          }`}
       >
         <input
           ref={inputRef}

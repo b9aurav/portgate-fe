@@ -366,11 +366,10 @@ function DiscrepancyList({
             setHighlight(disc.id, disc.cells || [], disc.sev || "crit", disc.locs[0][0]);
           }
         }}
-        className={`rounded-xl border p-4 space-y-2.5 transition-all shadow-xs cursor-pointer hover:shadow-md ${
-          isResolved
+        className={`rounded-xl border p-4 space-y-2.5 transition-all shadow-xs cursor-pointer hover:shadow-md ${isResolved
             ? "border-emerald-300 bg-emerald-50/40"
             : style.border
-        }`}
+          }`}
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -449,16 +448,14 @@ function DiscrepancyList({
     <div className="space-y-4">
       {/* Summary Banner */}
       <div
-        className={`rounded-xl p-4 border-2 ${
-          unresolvedCount > 0
+        className={`rounded-xl p-4 border-2 ${unresolvedCount > 0
             ? "bg-rose-50 border-rose-500"
             : "bg-emerald-50 border-emerald-500"
-        }`}
+          }`}
       >
         <div
-          className={`text-sm font-bold ${
-            unresolvedCount > 0 ? "text-rose-900" : "text-emerald-900"
-          }`}
+          className={`text-sm font-bold ${unresolvedCount > 0 ? "text-rose-900" : "text-emerald-900"
+            }`}
         >
           {unresolvedCount > 0
             ? `🚫 ${unresolvedCount} item(s) require your revision`
@@ -513,11 +510,10 @@ function DiscrepancyList({
         type="button"
         onClick={onSubmitToBuyer}
         disabled={unresolvedCount > 0}
-        className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm ${
-          unresolvedCount > 0
+        className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm ${unresolvedCount > 0
             ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
             : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-md cursor-pointer"
-        }`}
+          }`}
       >
         <span>📦</span>
         <span>Submit Verified Revision #v{audit.revision_number} to US Buyer</span>
@@ -698,6 +694,11 @@ export default function SupplierUploadPage({
         <header className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-lg sticky top-0 z-30">
           <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <img
+                src="/logo.png"
+                alt="PortGate Logo"
+                className="w-8 h-8 rounded-lg shadow-sm object-contain"
+              />
               <div className="flex items-center gap-2">
                 <span className="text-2xl font-black text-white tracking-tight">PortGate</span>
                 <span className="text-[10px] font-bold bg-indigo-700 text-indigo-100 px-1.5 py-0.5 rounded font-mono">
@@ -800,10 +801,13 @@ export default function SupplierUploadPage({
 
         {/* ── Footer ── */}
         <footer className="border-t border-gray-200 bg-white mt-12 py-4 px-6">
-          <div className="max-w-6xl mx-auto flex items-center justify-between text-xs text-gray-400">
-            <span>PortGate Pre-Shipment Compliance Engine · India→US Corridor</span>
-            <span className="font-mono">Token: {token} · Revision v{audit.revision_number}</span>
-          </div>
+            <div className="max-w-6xl mx-auto flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center gap-2">
+                <img src="/logo.png" alt="PortGate" className="w-4 h-4 rounded object-contain" />
+                <span>PortGate Pre-Shipment Compliance Engine · India→US Corridor</span>
+              </div>
+              <span className="font-mono text-gray-400">Token: {token} · Revision v{audit.revision_number}</span>
+            </div>
         </footer>
       </div>
     </HighlightProvider>
