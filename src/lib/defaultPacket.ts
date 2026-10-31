@@ -15,6 +15,8 @@ import type { AuditResponse } from "@/types/audit";
  * - WARN-01: Over-quantity within tolerance on Line 2 (2,050 vs 2,000 @ ±5%)
  */
 export const DEFAULT_AUDIT_PACKET: AuditResponse = {
+  session_token: "",
+  revision_number: 1,
   shipment_ref: "SHP-2026-8841",
   metadata: {
     po_number: "PO-PCR-45012",

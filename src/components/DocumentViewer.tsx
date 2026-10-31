@@ -29,10 +29,11 @@ export function DocumentViewer({ data, isFixed, decisionTrail = [] }: DocumentVi
             key={tab.key}
             type="button"
             onClick={() => setActiveTab(tab.key)}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${activeTab === tab.key
-                ? "border-b-2 border-blue-600 text-blue-600"
+            className={`px-6 py-3 text-sm font-medium transition-colors ${
+              activeTab === tab.key
+                ? "border-b-2 border-blue-600 text-blue-600 font-semibold"
                 : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
+            }`}
           >
             {tab.label}
           </button>
@@ -56,7 +57,8 @@ export function DocumentViewer({ data, isFixed, decisionTrail = [] }: DocumentVi
 // ────────────────────────────────────────────────────────────────────────────
 
 function PODocument({ data }: { data: AuditResponse }) {
-  const m = data.metadata;
+  const m = data?.metadata || ({} as any);
+  const poLines = data?.po_lines || [];
 
   return (
     <div className="mx-auto max-w-4xl bg-white shadow-lg rounded border border-gray-300 p-8 space-y-6 font-mono text-sm">
@@ -64,10 +66,10 @@ function PODocument({ data }: { data: AuditResponse }) {
       <div className="border-b-2 border-gray-800 pb-4">
         <div className="text-2xl font-bold text-gray-900 mb-1">PURCHASE ORDER</div>
         <div className="text-gray-600">
-          PO Number: <span className="font-semibold text-gray-900">{m.po_number}</span>
+          PO Number: <span className="font-semibold text-gray-900">{m?.po_number || "—"}</span>
         </div>
         <div className="text-gray-600">
-          Shipment Ref: <span className="font-semibold text-gray-900">{data.shipment_ref}</span>
+          Shipment Ref: <span className="font-semibold text-gray-900">{data?.shipment_ref || "—"}</span>
         </div>
       </div>
 
@@ -75,17 +77,17 @@ function PODocument({ data }: { data: AuditResponse }) {
       <div className="grid grid-cols-2 gap-6">
         <div>
           <div className="text-xs font-bold text-gray-500 uppercase mb-1">Seller (Exporter)</div>
-          <div className="font-semibold text-gray-900">{m.exporter_name}</div>
-          <div className="text-gray-700">{m.exporter_street}</div>
+          <div className="font-semibold text-gray-900">{m?.exporter_name || "—"}</div>
+          <div className="text-gray-700">{m?.exporter_street || ""}</div>
           <div className="text-gray-700">
-            {m.exporter_city}, {m.exporter_state} {m.exporter_postal}
+            {[m?.exporter_city, m?.exporter_state, m?.exporter_postal].filter(Boolean).join(", ")}
           </div>
-          <div className="text-gray-700">{m.exporter_country_iso}</div>
+          <div className="text-gray-700">{m?.exporter_country_iso || "IN"}</div>
         </div>
         <div>
           <div className="text-xs font-bold text-gray-500 uppercase mb-1">Buyer (Importer)</div>
-          <div className="font-semibold text-gray-900">{m.importer_name}</div>
-          <div className="text-gray-700">{m.importer_city_state}</div>
+          <div className="font-semibold text-gray-900">{m?.importer_name || "—"}</div>
+          <div className="text-gray-700">{m?.importer_city_state || ""}</div>
         </div>
       </div>
 
@@ -93,15 +95,15 @@ function PODocument({ data }: { data: AuditResponse }) {
       <div className="grid grid-cols-3 gap-4 bg-gray-50 p-3 rounded">
         <div>
           <div className="text-xs text-gray-500">Incoterm</div>
-          <div className="font-semibold">{m.po_incoterm || m.incoterm}</div>
+          <div className="font-semibold">{m?.po_incoterm || m?.incoterm || "FOB"}</div>
         </div>
         <div>
           <div className="text-xs text-gray-500">Currency</div>
-          <div className="font-semibold">{m.po_currency || m.currency}</div>
+          <div className="font-semibold">{m?.po_currency || m?.currency || "USD"}</div>
         </div>
         <div>
           <div className="text-xs text-gray-500">Port of Loading</div>
-          <div className="font-semibold">{m.port_of_loading}</div>
+          <div className="font-semibold">{m?.port_of_loading || "INMUN1"}</div>
         </div>
       </div>
 
@@ -122,27 +124,31 @@ function PODocument({ data }: { data: AuditResponse }) {
             </tr>
           </thead>
           <tbody>
-            {data.po_lines.map((line, idx) => {
+            {poLines.map((line, idx) => {
               const i = idx + 1;
+              const qtyNum = Number(line.qty) || 0;
+              const priorNum = Number(line.prior) || 0;
+              const openNum = Number(line.open) || qtyNum;
+              const priceNum = Number(line.price) || 0;
               return (
                 <tr key={idx} className="text-xs">
                   <td className="border border-gray-300 px-2 py-1">{i}</td>
-                  <td className="border border-gray-300 px-2 py-1">{line.sku}</td>
-                  <td className="border border-gray-300 px-2 py-1">{line.desc}</td>
+                  <td className="border border-gray-300 px-2 py-1">{line.sku || "—"}</td>
+                  <td className="border border-gray-300 px-2 py-1">{line.desc || "—"}</td>
                   <td className="border border-gray-300 px-2 py-1">
-                    <Hl id={`po-hts${i}`}>{line.hts}</Hl>
+                    <Hl id={`po-hts${i}`}>{line.hts || "—"}</Hl>
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
-                    {line.qty.toLocaleString()} PCS
+                    {qtyNum.toLocaleString()} PCS
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
-                    {line.prior.toLocaleString()}
+                    {priorNum.toLocaleString()}
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
-                    <Hl id={`po-open${i}`}>{line.open.toLocaleString()} PCS</Hl>
+                    <Hl id={`po-open${i}`}>{openNum.toLocaleString()} PCS</Hl>
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
-                    <Hl id={`po-price${i}`}>${line.price.toFixed(2)}</Hl>
+                    <Hl id={`po-price${i}`}>${priceNum.toFixed(2)}</Hl>
                   </td>
                 </tr>
               );
@@ -153,7 +159,7 @@ function PODocument({ data }: { data: AuditResponse }) {
 
       {/* Footer */}
       <div className="text-xs text-gray-500 pt-4 border-t border-gray-200">
-        This Purchase Order is issued by {m.importer_name} and constitutes the buyer's binding
+        This Purchase Order is issued by {m?.importer_name || "Buyer"} and constitutes the binding
         agreement for the shipment described above.
       </div>
     </div>
@@ -173,13 +179,17 @@ function InvDocument({
   isFixed: boolean;
   decisionTrail?: AuditDecisionLogEntry[];
 }) {
-  const m = data.metadata;
+  const m = data?.metadata || ({} as any);
+  const invLines = data?.inv_lines || [];
+  const invWeights = data?.weights?.inv || [];
+  const invCartons = data?.cartons?.inv || [];
+
   const showCertificate =
     isFixed ||
-    data.summary.status === "CLEAR" ||
-    data.summary.status === "VERIFIED_CLEAN" ||
-    data.summary.status === "CLEARED_WITH_EXCEPTIONS" ||
-    (data.items.length > 0 &&
+    data?.summary?.status === "CLEAR" ||
+    data?.summary?.status === "VERIFIED_CLEAN" ||
+    data?.summary?.status === "CLEARED_WITH_EXCEPTIONS" ||
+    (data?.items?.length > 0 &&
       data.items.every((it) => it.resolution_state && it.resolution_state !== "UNRESOLVED"));
 
   return (
@@ -192,23 +202,27 @@ function InvDocument({
 
       {/* Exporter Details */}
       <div className="bg-blue-50 p-3 rounded">
-        <div className="font-bold text-gray-900 mb-1">{m.exporter_name}</div>
-        <div className="text-xs text-gray-700">{m.exporter_street}</div>
+        <div className="font-bold text-gray-900 mb-1">{m?.exporter_name || "—"}</div>
+        <div className="text-xs text-gray-700">{m?.exporter_street || ""}</div>
         <div className="text-xs text-gray-700">
-          {m.exporter_city}, {m.exporter_state} {m.exporter_postal}, {m.exporter_country_iso}
+          {[m?.exporter_city, m?.exporter_state, m?.exporter_postal, m?.exporter_country_iso]
+            .filter(Boolean)
+            .join(", ")}
         </div>
         <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
           <div>
             <span className="text-gray-500">GSTIN:</span>{" "}
-            <span className="font-semibold">{m.exporter_gstin}</span>
+            <span className="font-semibold">{m?.exporter_gstin || "—"}</span>
           </div>
           <div>
             <span className="text-gray-500">IEC:</span>{" "}
-            <span className="font-semibold">{m.exporter_iec}</span>
+            <span className="font-semibold">{m?.exporter_iec || "—"}</span>
           </div>
           <div className="col-span-2">
             <span className="text-gray-500">LUT ARN:</span>{" "}
-            <span className="font-semibold">{m.exporter_lut_arn || "(Missing)"}</span>
+            <Hl id="inv-lut" className="font-semibold">
+              {m?.exporter_lut_arn || "(Missing / Not Provided)"}
+            </Hl>
           </div>
         </div>
       </div>
@@ -218,29 +232,29 @@ function InvDocument({
         <div className="space-y-1 text-xs">
           <div>
             <span className="text-gray-500">Invoice No:</span>{" "}
-            <span className="font-semibold">{m.invoice_no}</span>
+            <span className="font-semibold">{m?.invoice_no || "—"}</span>
           </div>
           <div>
             <span className="text-gray-500">Date:</span>{" "}
-            <span className="font-semibold">{m.invoice_date}</span>
+            <span className="font-semibold">{m?.invoice_date || "—"}</span>
           </div>
           <div>
             <span className="text-gray-500">Buyer PO:</span>{" "}
-            <span className="font-semibold">{m.po_number}</span>
+            <span className="font-semibold">{m?.po_number || "—"}</span>
           </div>
           <div>
             <span className="text-gray-500">Incoterm:</span>{" "}
-            <span className="font-semibold">{m.incoterm}</span>
+            <span className="font-semibold">{m?.incoterm || "—"}</span>
           </div>
           <div>
             <span className="text-gray-500">Currency:</span>{" "}
-            <span className="font-semibold">{m.currency}</span>
+            <span className="font-semibold">{m?.currency || "USD"}</span>
           </div>
         </div>
         <div className="flex items-center justify-end">
           <div className="bg-gradient-to-br from-blue-600 to-blue-800 text-white px-4 py-3 rounded-lg shadow-md text-center">
             <div className="text-xs font-semibold uppercase tracking-wide">US CBP MID Code</div>
-            <div className="text-2xl font-bold tracking-wider mt-1">{data.mid_code}</div>
+            <div className="text-2xl font-bold tracking-wider mt-1">{data?.mid_code || "—"}</div>
           </div>
         </div>
       </div>
@@ -248,8 +262,8 @@ function InvDocument({
       {/* Consignee */}
       <div className="bg-gray-50 p-3 rounded text-xs">
         <div className="text-gray-500 font-semibold mb-1">Consignee (Buyer)</div>
-        <div className="font-semibold text-gray-900">{m.importer_name}</div>
-        <div className="text-gray-700">{m.importer_city_state}</div>
+        <div className="font-semibold text-gray-900">{m?.importer_name || "—"}</div>
+        <div className="text-gray-700">{m?.importer_city_state || ""}</div>
       </div>
 
       {/* Line Items */}
@@ -267,28 +281,31 @@ function InvDocument({
             </tr>
           </thead>
           <tbody>
-            {data.inv_lines.map((line, idx) => {
+            {invLines.map((line, idx) => {
               const i = idx + 1;
-              // Part 3 Fix: always use the raw `amount` field extracted from the PDF.
-              // Never recompute from qty × rate in JSX — the backend's line_total is
-              // the authoritative "printed" value, which may intentionally differ
-              // (e.g. RULE-D05 arithmetic error: 500×$9.50=$4,750 but PDF prints $4,850).
-              const amount = line.amount ?? line.qty * line.rate;
+              const qtyNum = Number(line.qty) || 0;
+              const rateNum = Number(line.rate) || 0;
+              const amountNum = typeof line.amount === "number" ? line.amount : qtyNum * rateNum;
               return (
                 <tr key={idx} className="text-xs">
                   <td className="border border-gray-300 px-2 py-1">{i}</td>
-                  <td className="border border-gray-300 px-2 py-1">{line.desc}</td>
+                  <td className="border border-gray-300 px-2 py-1">{line.desc || "—"}</td>
                   <td className="border border-gray-300 px-2 py-1">
-                    <Hl id={`inv-hsn${i}`}>{line.hsn}</Hl>
+                    <Hl id={`inv-hsn${i}`}>{line.hsn || "—"}</Hl>
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
-                    <Hl id={`inv-qty${i}`}>{line.qty.toLocaleString()}</Hl>
+                    <Hl id={`inv-qty${i}`}>{qtyNum.toLocaleString()}</Hl>
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
-                    <Hl id={`inv-rate${i}`}>{line.rate.toFixed(2)}</Hl>
+                    <Hl id={`inv-rate${i}`}>{rateNum.toFixed(2)}</Hl>
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
-                    <Hl id={`inv-amt${i}`}>{amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Hl>
+                    <Hl id={`inv-amt${i}`}>
+                      {amountNum.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </Hl>
                   </td>
                 </tr>
               );
@@ -317,17 +334,19 @@ function InvDocument({
             </tr>
           </thead>
           <tbody>
-            {data.weights.inv.map(([net, gross], idx) => {
+            {invWeights.map((w, idx) => {
               const i = idx + 1;
-              const ctns = data.cartons.inv[idx];
+              const netNum = Number(Array.isArray(w) ? w[0] : 0) || 0;
+              const grossNum = Number(Array.isArray(w) ? w[1] : 0) || 0;
+              const ctns = invCartons[idx] != null ? invCartons[idx] : 0;
               return (
                 <tr key={idx} className="text-xs">
                   <td className="border border-gray-300 px-2 py-1">{i}</td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
-                    <Hl id={`inv-net${i}`}>{net.toFixed(2)}</Hl>
+                    <Hl id={`inv-net${i}`}>{netNum.toFixed(2)}</Hl>
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
-                    <Hl id={`inv-gross${i}`}>{gross.toFixed(2)}</Hl>
+                    <Hl id={`inv-gross${i}`}>{grossNum.toFixed(2)}</Hl>
                   </td>
                   <td className="border border-gray-300 px-2 py-1 text-right">{ctns}</td>
                 </tr>
@@ -338,7 +357,7 @@ function InvDocument({
                 Total Cartons:
               </td>
               <td className="border border-gray-300 px-2 py-1 text-right">
-                <Hl id="inv-ctns">{data.cartons.inv.reduce((s, n) => s + n, 0)}</Hl>
+                <Hl id="inv-ctns">{invCartons.reduce((s, n) => s + (Number(n) || 0), 0)}</Hl>
               </td>
             </tr>
           </tbody>
@@ -353,7 +372,7 @@ function InvDocument({
       {/* Footer Declaration */}
       <div className="text-xs text-gray-500 pt-4 border-t border-gray-200">
         We hereby certify that this invoice shows the actual value of the goods described and that
-        all information is true and correct. Export under LUT/Bond ARN: {m.exporter_lut_arn}.
+        all information is true and correct. Export under LUT/Bond ARN: {m?.exporter_lut_arn || "—"}.
       </div>
     </div>
   );
@@ -364,7 +383,11 @@ function InvDocument({
 // ────────────────────────────────────────────────────────────────────────────
 
 function PLDocument({ data }: { data: AuditResponse }) {
-  const m = data.metadata;
+  const m = data?.metadata || ({} as any);
+
+  const invLines = data?.inv_lines || [];
+  const plWeights = data?.weights?.pl || [];
+  const plCartons = data?.cartons?.pl || [];
 
   return (
     <div className="mx-auto max-w-4xl bg-white shadow-lg rounded border border-gray-300 p-8 space-y-4 font-mono text-sm">
@@ -372,7 +395,7 @@ function PLDocument({ data }: { data: AuditResponse }) {
       <div className="border-b-2 border-gray-800 pb-3">
         <div className="text-2xl font-bold text-gray-900 mb-1">PACKING LIST</div>
         <div className="text-xs text-gray-600">
-          Document No: <span className="font-semibold">{m.packing_list_no}</span>
+          Document No: <span className="font-semibold">{m?.packing_list_no || "—"}</span>
         </div>
       </div>
 
@@ -380,15 +403,15 @@ function PLDocument({ data }: { data: AuditResponse }) {
       <div className="grid grid-cols-2 gap-4 text-xs">
         <div>
           <div className="text-gray-500 font-semibold mb-1">Shipper (Exporter)</div>
-          <div className="font-semibold text-gray-900">{m.exporter_name}</div>
+          <div className="font-semibold text-gray-900">{m?.exporter_name || "—"}</div>
           <div className="text-gray-700">
-            {m.exporter_city}, {m.exporter_state}, {m.exporter_country_iso}
+            {[m?.exporter_city, m?.exporter_state, m?.exporter_country_iso].filter(Boolean).join(", ")}
           </div>
         </div>
         <div>
           <div className="text-gray-500 font-semibold mb-1">Consignee (Buyer)</div>
-          <div className="font-semibold text-gray-900">{m.importer_name}</div>
-          <div className="text-gray-700">{m.importer_city_state}</div>
+          <div className="font-semibold text-gray-900">{m?.importer_name || "—"}</div>
+          <div className="text-gray-700">{m?.importer_city_state || ""}</div>
         </div>
       </div>
 
@@ -396,11 +419,11 @@ function PLDocument({ data }: { data: AuditResponse }) {
       <div className="bg-gray-50 p-3 rounded text-xs space-y-1">
         <div>
           <span className="text-gray-500">Port of Loading:</span>{" "}
-          <span className="font-semibold">{m.port_of_loading}</span>
+          <span className="font-semibold">{m?.port_of_loading || "INMUN1"}</span>
         </div>
         <div>
           <span className="text-gray-500">Port of Discharge:</span>{" "}
-          <span className="font-semibold">{m.port_of_discharge}</span>
+          <span className="font-semibold">{m?.port_of_discharge || "USLAX"}</span>
         </div>
       </div>
 
@@ -418,19 +441,21 @@ function PLDocument({ data }: { data: AuditResponse }) {
             </tr>
           </thead>
           <tbody>
-            {data.inv_lines.map((line, idx) => {
+            {invLines.map((line, idx) => {
               const i = idx + 1;
-              const [net, gross] = data.weights.pl[idx];
-              const ctns = data.cartons.pl[idx];
+              const w = plWeights[idx];
+              const netNum = Number(Array.isArray(w) ? w[0] : 0) || 0;
+              const grossNum = Number(Array.isArray(w) ? w[1] : 0) || 0;
+              const ctns = plCartons[idx] != null ? plCartons[idx] : 0;
               return (
                 <tr key={idx} className="text-xs">
                   <td className="border border-gray-300 px-2 py-1">{i}</td>
-                  <td className="border border-gray-300 px-2 py-1">{line.desc}</td>
+                  <td className="border border-gray-300 px-2 py-1">{line.desc || "—"}</td>
                   <td className="border border-gray-300 px-2 py-1 text-right">
                     <Hl id={`pl-ct${i}`}>{ctns}</Hl>
                   </td>
-                  <td className="border border-gray-300 px-2 py-1 text-right">{net.toFixed(2)}</td>
-                  <td className="border border-gray-300 px-2 py-1 text-right">{gross.toFixed(2)}</td>
+                  <td className="border border-gray-300 px-2 py-1 text-right">{netNum.toFixed(2)}</td>
+                  <td className="border border-gray-300 px-2 py-1 text-right">{grossNum.toFixed(2)}</td>
                 </tr>
               );
             })}
@@ -439,13 +464,13 @@ function PLDocument({ data }: { data: AuditResponse }) {
                 Total:
               </td>
               <td className="border border-gray-300 px-2 py-1 text-right">
-                <Hl id="pl-ctns">{data.cartons.pl.reduce((s, n) => s + n, 0)} CTNS</Hl>
+                <Hl id="pl-ctns">{plCartons.reduce((s, n) => s + (Number(n) || 0), 0)} CTNS</Hl>
               </td>
               <td className="border border-gray-300 px-2 py-1 text-right">
-                {data.weights.pl.reduce((s, [n]) => s + n, 0).toFixed(2)} KG
+                {plWeights.reduce((s, w) => s + (Array.isArray(w) ? Number(w[0]) || 0 : 0), 0).toFixed(2)} KG
               </td>
               <td className="border border-gray-300 px-2 py-1 text-right">
-                {data.weights.pl.reduce((s, [, g]) => s + g, 0).toFixed(2)} KG
+                {plWeights.reduce((s, w) => s + (Array.isArray(w) ? Number(w[1]) || 0 : 0), 0).toFixed(2)} KG
               </td>
             </tr>
           </tbody>
@@ -454,8 +479,8 @@ function PLDocument({ data }: { data: AuditResponse }) {
 
       {/* Footer */}
       <div className="text-xs text-gray-500 pt-4 border-t border-gray-200">
-        This packing list accompanies shipment {data.shipment_ref} and contains accurate weight and
-        carton information.
+        This packing list accompanies shipment {data?.shipment_ref || "—"} and contains accurate weight
+        and carton information.
       </div>
     </div>
   );
@@ -472,93 +497,43 @@ function DocumentIntegrityDecisionLog({
   data: AuditResponse;
   decisions?: AuditDecisionLogEntry[];
 }) {
-  const [hash, setHash] = React.useState<string>("");
-
-  React.useEffect(() => {
-    const generateHash = async () => {
-      const payload = JSON.stringify({
-        shipment_ref: data.shipment_ref,
-        mid: data.mid_code,
-        status: data.summary.status,
-      });
-      const buffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(payload));
-      const hashArray = Array.from(new Uint8Array(buffer));
-      const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-      setHash(hashHex.substring(0, 24).toUpperCase());
-    };
-    generateHash();
-  }, [data]);
+  const m = data?.metadata || ({} as any);
+  const now = new Date().toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
   return (
-    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-600 rounded-lg p-5 space-y-3 font-sans">
+    <div className="mt-6 p-4 bg-emerald-50 border-2 border-emerald-500 rounded-lg text-xs space-y-2">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-sm">
-            ✓
-          </div>
-          <div>
-            <div className="text-sm font-bold text-emerald-950">
-              Document Integrity & Decision Log
-            </div>
-            <div className="text-xs text-emerald-700">
-              Pre-Shipment 3-Way Audit Trail & Cryptographic Decision Log — India→US Corridor
-            </div>
-          </div>
+        <div className="font-bold text-emerald-900 text-sm flex items-center gap-1.5">
+          <span>✓</span>
+          <span>COMPLIANCE CLEARANCE RECORD</span>
         </div>
-        <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-white border border-emerald-300 text-emerald-800">
-          {data.summary.status}
-        </span>
-      </div>
-
-      <div className="bg-white rounded-lg p-3 text-xs font-mono space-y-1.5 border border-emerald-200">
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <span className="text-gray-500">Shipment Ref:</span>{" "}
-            <span className="font-semibold text-gray-900">{data.shipment_ref}</span>
-          </div>
-          <div>
-            <span className="text-gray-500">CBP MID:</span>{" "}
-            <span className="font-semibold text-gray-900">{data.mid_code}</span>
-          </div>
-        </div>
-        <div>
-          <span className="text-gray-500">Audit Status:</span>{" "}
-          <span className="font-semibold text-emerald-700">{data.summary.status}</span>
-        </div>
-        <div>
-          <span className="text-gray-500">SHA-256 Proof:</span>{" "}
-          <span className="font-semibold text-emerald-900 bg-emerald-50 px-1.5 py-0.5 rounded text-[11px]">
-            SHA256:{hash}
-          </span>
+        <div className="font-mono text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded">
+          {now}
         </div>
       </div>
-
-      {/* Logged Decisions Summary */}
+      <div className="text-emerald-800 leading-relaxed">
+        This shipment packet ({data?.shipment_ref || "—"}) has completed pre-shipment compliance
+        auditing. All line items, weights, and classification roots have been resolved or cleared with
+        authorized evidence notes on file.
+      </div>
       {decisions.length > 0 && (
-        <div className="bg-white/80 rounded-lg p-2.5 border border-emerald-200 space-y-1">
-          <div className="text-[11px] font-bold text-emerald-900">
-            Recorded Exception & Resolution Log ({decisions.length}):
+        <div className="mt-2 pt-2 border-t border-emerald-200 space-y-1">
+          <div className="text-[10px] font-bold text-emerald-900 uppercase">
+            Logged Buyer Sign-Offs ({decisions.length})
           </div>
-          <div className="space-y-1 text-[11px] text-gray-700">
-            {decisions.map((d) => (
-              <div key={d.id} className="flex items-center justify-between border-b border-gray-100 pb-1">
-                <span className="font-semibold text-gray-800">
-                  [{d.discrepancy_id}] {d.reason_chip}
-                </span>
-                <span className="text-[10px] text-gray-400 font-mono">
-                  {d.actor_name}
-                </span>
-              </div>
-            ))}
-          </div>
+          {decisions.map((d) => (
+            <div key={d.id} className="text-[11px] text-emerald-900 flex items-center gap-1">
+              <span>•</span>
+              <span className="font-semibold">{d.title}:</span>
+              <span>{d.reason_chip}</span>
+            </div>
+          ))}
         </div>
       )}
-
-      <div className="text-xs text-emerald-900 leading-relaxed">
-        This shipment packet has been evaluated by PortGate's deterministic compliance engine against all
-        Rule-1 through Rule-5 categories. All line math, tariff roots, and operational variances have been
-        substantiated and logged into this auditable chain of custody.
-      </div>
     </div>
   );
 }

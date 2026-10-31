@@ -228,22 +228,35 @@ export function AuditSidebar({
         </div>
 
         {/* Discrepancies with Evidence-Backed Resolution Bars */}
-        {data.items.length > 0 && (
+        {(data.items || []).length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between text-xs font-bold text-gray-700">
-              <span>Discrepancies ({data.items.length})</span>
+              <span>Discrepancies ({(data.items || []).length})</span>
               <span className="text-[11px] font-normal text-gray-500">
                 Click line to highlight in docs
               </span>
             </div>
 
-            {data.items.map((item) => {
+            {(data.items || []).map((item) => {
               const category = item.category || "DETERMINISTIC_CONFLICT";
               const categoryBadge = {
                 DETERMINISTIC_CONFLICT: "bg-rose-100 text-rose-800 border-rose-300",
                 COMMERCIAL_VARIANCE: "bg-amber-100 text-amber-800 border-amber-300",
                 COMPLIANCE_ADVISORY: "bg-sky-100 text-sky-800 border-sky-300",
-              }[category];
+              }[category] || "bg-gray-100 text-gray-800 border-gray-300";
+
+              const locs: [string, string][] =
+                Array.isArray(item.locs) && item.locs.length > 0
+                  ? (item.locs as [string, string][])
+                  : [["inv", "Invoice"]];
+              const cells: string[] = Array.isArray(item.cells)
+                ? item.cells
+                : Array.isArray(item.highlight_cells)
+                ? item.highlight_cells
+                : [];
+              const sev = item.sev || (item.severity === "CRITICAL" ? "crit" : "warn");
+              const body = item.body || item.description || "";
+              const defaultTab = locs[0]?.[0] || "inv";
 
               return (
                 <div
@@ -255,13 +268,13 @@ export function AuditSidebar({
                       ? "border-sky-300 bg-sky-50/40"
                       : item.resolution_state === "REVISION_REQUESTED"
                       ? "border-purple-300 bg-purple-50/40"
-                      : item.sev === "crit"
+                      : sev === "crit"
                       ? "border-l-4 border-l-rose-600 border-gray-200 bg-white"
                       : "border-l-4 border-l-amber-500 border-gray-200 bg-white"
                   }`}
                   onClick={() => {
-                    setHighlight(item.id, item.cells, item.sev, item.locs[0]?.[0] || "inv");
-                    setActiveTab(item.locs[0]?.[0] || "inv");
+                    setHighlight(item.id, cells, sev, defaultTab);
+                    setActiveTab(defaultTab);
                   }}
                 >
                   <div className="space-y-1.5">
@@ -270,7 +283,7 @@ export function AuditSidebar({
                       <div className="flex items-center gap-1.5">
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            item.sev === "crit"
+                            sev === "crit"
                               ? "bg-rose-600 text-white"
                               : "bg-amber-500 text-white"
                           }`}
@@ -292,19 +305,19 @@ export function AuditSidebar({
 
                     {/* Body */}
                     <div className="text-[11px] text-gray-600 line-clamp-2 leading-relaxed">
-                      {item.body}
+                      {body}
                     </div>
 
                     {/* Document Location Tabs */}
                     <div className="flex flex-wrap gap-1 pt-1">
-                      {item.locs.map(([key, label], idx) => (
+                      {locs.map(([key, label], idx) => (
                         <button
                           key={idx}
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setActiveTab(key);
-                            setHighlight(item.id, item.cells, item.sev, key);
+                            setHighlight(item.id, cells, sev, key);
                           }}
                           className="text-[10px] bg-white border border-gray-300 hover:bg-gray-50 px-1.5 py-0.5 rounded text-gray-700 transition-colors"
                         >

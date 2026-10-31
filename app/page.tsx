@@ -11,60 +11,51 @@ import type {
   AuditDecisionLogEntry,
   AuditResponse,
   HealthResponse,
-  MagicLinkSession,
   ResolutionState,
-  SubmissionStatus,
 } from "@/types/audit";
 
 type Phase = "idle" | "run" | "done";
 
-const ACTIVE_TOKEN = "shreeji-po-9921";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const POLL_INTERVAL_MS = 3000;
 
 // ────────────────────────────────────────────────────────────────────────────
-// Submission status badge styles
-// ────────────────────────────────────────────────────────────────────────────
-const STATUS_BADGE: Record<SubmissionStatus, { cls: string; label: string }> = {
-  AWAITING_SUPPLIER_UPLOAD: {
-    cls: "bg-gray-100 text-gray-600 border-gray-300",
-    label: "⏳ Awaiting Supplier Upload",
-  },
-  DISCREPANCIES_FLAGGED: {
-    cls: "bg-rose-100 text-rose-800 border-rose-300",
-    label: "🚫 Discrepancies Flagged",
-  },
-  SUBMITTED_FOR_BUYER_REVIEW: {
-    cls: "bg-amber-100 text-amber-800 border-amber-300",
-    label: "📬 Submitted for Review",
-  },
-  CLEARED: {
-    cls: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    label: "✓ Cleared",
-  },
-};
-
-// ────────────────────────────────────────────────────────────────────────────
 // Magic Link Popover component
 // ────────────────────────────────────────────────────────────────────────────
-function MagicLinkPopover({ token, onClose }: { token: string; onClose: () => void }) {
-  const url = `http://localhost:3000/upload/${token}`;
+function MagicLinkPopover({
+  token,
+  revisionNumber,
+  onClose,
+}: {
+  token: string;
+  revisionNumber: number;
+  onClose: () => void;
+}) {
+  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  const url = `${origin}/upload/${token}`;
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error("Failed to copy link:", e);
+    }
   };
 
   return (
     <div className="absolute top-14 right-0 z-50 w-96 bg-white border border-gray-200 rounded-xl shadow-2xl p-5 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="font-bold text-sm text-gray-900">🔗 Supplier Magic Upload Link</div>
+        <div className="flex items-center gap-2">
+          <span className="text-base">🔗</span>
+          <span className="font-bold text-sm text-gray-900">Supplier Revision Magic Link</span>
+        </div>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+          className="text-gray-400 hover:text-gray-600 text-lg leading-none p-1"
         >
           ×
         </button>
@@ -72,34 +63,42 @@ function MagicLinkPopover({ token, onClose }: { token: string; onClose: () => vo
 
       {/* Description */}
       <div className="text-xs text-gray-600 leading-relaxed">
-        Share this zero-login link with your Indian supplier. They can upload their Tally
-        Invoice and Packing List without creating an account.
+        Share this zero-login revision link with your Indian supplier. They can inspect flagged
+        discrepancies, match against your locked Buyer PO, and upload revised documents.
       </div>
 
-      {/* Token badge */}
-      <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
-        <div className="text-[10px] text-indigo-500 font-semibold uppercase tracking-wider mb-1">
-          Session Token
+      {/* Metadata Badges */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-2">
+          <div className="text-[10px] text-indigo-500 font-semibold uppercase tracking-wider mb-0.5">
+            Dynamic Token
+          </div>
+          <div className="font-mono text-xs font-bold text-indigo-900 truncate">{token}</div>
         </div>
-        <div className="font-mono text-sm font-bold text-indigo-900">{token}</div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+          <div className="text-[10px] text-blue-500 font-semibold uppercase tracking-wider mb-0.5">
+            Active Revision
+          </div>
+          <div className="font-mono text-xs font-bold text-blue-900">v{revisionNumber}</div>
+        </div>
       </div>
 
       {/* URL display */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
         <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1">
-          Supplier Upload URL
+          Supplier Revision URL
         </div>
-        <div className="font-mono text-xs text-gray-700 break-all">{url}</div>
+        <div className="font-mono text-xs text-gray-700 break-all select-all">{url}</div>
       </div>
 
       {/* Copy button */}
       <button
+        type="button"
         onClick={handleCopy}
-        className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-          copied
+        className={`w-full py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${copied
             ? "bg-emerald-600 text-white"
             : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-        }`}
+          }`}
       >
         {copied ? (
           <>
@@ -109,21 +108,21 @@ function MagicLinkPopover({ token, onClose }: { token: string; onClose: () => vo
         ) : (
           <>
             <span>📋</span>
-            <span>Copy for Incognito Window</span>
+            <span>Copy Magic Link</span>
           </>
         )}
       </button>
 
       {/* Hint */}
       <div className="text-[11px] text-gray-500 text-center italic">
-        Open in an Incognito/Private window to simulate the supplier&apos;s experience
+        Open in an Incognito / Private window to simulate the Indian supplier experience
       </div>
     </div>
   );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Main Page
+// Main Page: US Buyer Exception Workbench
 // ────────────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   // ── Core audit state ──────────────────────────────────────────────────────
@@ -136,17 +135,13 @@ export default function HomePage() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [auditCount, setAuditCount] = useState(0);
   const [decisionTrail, setDecisionTrail] = useState<AuditDecisionLogEntry[]>([]);
-
-  // Buyer Workbench is the only role on this page
-  const viewMode = "BUYER_WORKBENCH" as const;
-
-  // ── Magic-link session state ──────────────────────────────────────────────
-  const [session, setSession] = useState<MagicLinkSession | null>(null);
   const [showMagicPopover, setShowMagicPopover] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // ── Health check ─────────────────────────────────────────────────────────
+  const viewMode = "BUYER_WORKBENCH" as const;
+
+  // ── Health check on mount ─────────────────────────────────────────────────
   useEffect(() => {
     const checkHealth = async () => {
       try {
@@ -159,33 +154,70 @@ export default function HomePage() {
     checkHealth();
   }, []);
 
-  // ── Magic-link polling ────────────────────────────────────────────────────
-  const fetchSession = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/links/${ACTIVE_TOKEN}`);
-      if (!res.ok) return;
-      const s: MagicLinkSession = await res.json();
-      setSession(s);
-      setLastSynced(new Date().toLocaleTimeString());
-    } catch {
-      // Network error — keep stale state
-    }
-  }, []);
+  // ── Session tracking ref to prevent stale polling overwrites ─────────────
+  const activeTokenRef = useRef<string>(data.session_token || "");
 
   useEffect(() => {
-    fetchSession();
-    pollRef.current = setInterval(fetchSession, POLL_INTERVAL_MS);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [fetchSession]);
+    activeTokenRef.current = data.session_token || "";
+  }, [data.session_token]);
 
-  // ── Audit handlers ────────────────────────────────────────────────────────
+  // ── Dynamic Session Polling & Refresh ────────────────────────────────────
+  const syncSession = useCallback(
+    async (token: string) => {
+      if (!token || token !== activeTokenRef.current) return;
+      try {
+        setIsSyncing(true);
+        const res = await fetch(`${API_URL}/api/links/${token}`);
+        if (!res.ok) return;
+
+        // Discard if token changed while request was in flight
+        if (token !== activeTokenRef.current) return;
+
+        const updated: AuditResponse = await res.json();
+        if (updated.session_token !== activeTokenRef.current) return;
+
+        setData((prev) => ({
+          ...prev,
+          ...updated,
+          items: updated.items || updated.discrepancies || prev.items || [],
+          discrepancies: updated.discrepancies || updated.items || prev.discrepancies || [],
+        }));
+        setLastSynced(new Date().toLocaleTimeString());
+      } catch (err) {
+        console.warn("Failed to sync session:", err);
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    const token = data.session_token;
+    if (!token) return;
+
+    // Window focus refresh
+    const onFocus = () => {
+      syncSession(token);
+    };
+    window.addEventListener("focus", onFocus);
+
+    // 3-second background polling
+    const timer = setInterval(() => {
+      syncSession(token);
+    }, POLL_INTERVAL_MS);
+
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      clearInterval(timer);
+    };
+  }, [data.session_token, syncSession]);
+
+  // ── Run Audit Handler (POST /api/audit) ──────────────────────────────────
   const handleRunAudit = async (mock: boolean) => {
     setPhase("run");
     setIsFixed(false);
     setDecisionTrail([]);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     try {
       const formData = new FormData();
@@ -207,7 +239,10 @@ export default function HomePage() {
       if (!res.ok) throw new Error((await res.json()).detail || "Audit failed");
 
       const auditData: AuditResponse = await res.json();
+      activeTokenRef.current = auditData.session_token;
       setData(auditData);
+      setLastSynced(new Date().toLocaleTimeString());
+      setAuditCount((prev) => prev + 1);
       setPhase("done");
     } catch (err) {
       console.error("Audit failed:", err);
@@ -217,14 +252,33 @@ export default function HomePage() {
   };
 
   const handleUploadSuccess = (auditData: AuditResponse) => {
-    setData(auditData);
+    activeTokenRef.current = auditData.session_token;
+    const safeData: AuditResponse = {
+      ...auditData,
+      items: auditData.items || auditData.discrepancies || [],
+      discrepancies: auditData.discrepancies || auditData.items || [],
+      passed: auditData.passed || [],
+      po_lines: auditData.po_lines || [],
+      inv_lines: auditData.inv_lines || [],
+      metadata: auditData.metadata || ({} as any),
+      weights: auditData.weights || { inv: [], pl: [] },
+      cartons: auditData.cartons || { inv: [], pl: [] },
+      summary: auditData.summary || {
+        status: "VERIFIED_CLEAN",
+        critical_count: 0,
+        warning_count: 0,
+        passed_count: 0,
+      },
+    };
+    setData(safeData);
     setPhase("done");
     setIsFixed(false);
     setDecisionTrail([]);
+    setLastSynced(new Date().toLocaleTimeString());
     setAuditCount((prev) => prev + 1);
   };
 
-  // ── Resolve discrepancy (persists to backend session) ────────────────────
+  // ── Discrepancy Triage (PATCH /api/links/{token}/discrepancies/{id}) ─────
   const handleResolveItem = async (
     itemId: string,
     action: "REQUEST_REVISION" | "ACCEPT_VARIANCE" | "ESCALATE_BROKER",
@@ -244,8 +298,8 @@ export default function HomePage() {
       action === "REQUEST_REVISION"
         ? "REVISION_REQUESTED"
         : action === "ACCEPT_VARIANCE"
-        ? "ACCEPTED_EXCEPTION"
-        : "ESCALATED_TO_BROKER";
+          ? "ACCEPTED_EXCEPTION"
+          : "ESCALATED_TO_BROKER";
 
     const logEntry: AuditDecisionLogEntry = {
       id: `DEC-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -262,37 +316,44 @@ export default function HomePage() {
     };
     setDecisionTrail((prev) => [logEntry, ...prev]);
 
-    // Persist to backend session if we have one
-    if (session) {
+    // Persist to backend session if active
+    if (data.session_token) {
       try {
-        await fetch(`${API_URL}/api/links/${ACTIVE_TOKEN}/discrepancies/${itemId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            resolution_state: newState,
-            resolution_reason_chip: reasonChip,
-            resolution_note: note,
-            actor_role: viewMode,
-          }),
-        });
-        // Refresh session to pick up updated status
-        await fetchSession();
+        const res = await fetch(
+          `${API_URL}/api/links/${data.session_token}/discrepancies/${itemId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              resolution_state: newState,
+              resolution_reason_chip: reasonChip,
+              resolution_note: note,
+              actor_role: viewMode,
+            }),
+          }
+        );
+        if (res.ok) {
+          const updated: AuditResponse = await res.json();
+          setData(updated);
+          setLastSynced(new Date().toLocaleTimeString());
+          return;
+        }
       } catch (err) {
         console.warn("Failed to persist discrepancy resolution:", err);
       }
     }
 
-    // Optimistic local update
+    // Fallback optimistic local update
     const updatedItems = data.items.map((it) =>
       it.id === itemId
         ? {
-            ...it,
-            resolution_state: newState,
-            resolution_reason_chip: reasonChip,
-            resolution_note: note,
-            resolved_by: "US Buyer Import Specialist",
-            resolved_at: timestamp,
-          }
+          ...it,
+          resolution_state: newState,
+          resolution_reason_chip: reasonChip,
+          resolution_note: note,
+          resolved_by: "US Buyer Import Specialist",
+          resolved_at: timestamp,
+        }
         : it
     );
 
@@ -330,18 +391,15 @@ export default function HomePage() {
       reason_chip: "Regenerated Tally Invoice & Scale Re-Weigh Completed",
       note: "Supplier resolved weight inversion & carton drift; HSN code synchronized to PO.",
       actor_role: "SUPPLIER_PORTAL",
-      actor_name: "Shreeji Textiles (Surat, IN)",
+      actor_name: data.metadata.exporter_name || "Supplier",
       timestamp,
     };
     setDecisionTrail((prev) => [logEntry, ...prev]);
   };
 
-  const m = data.metadata;
+  const m = data.metadata || ({} as any);
   const isStatusBlocked =
-    data.summary.status === "ACTION_REQUIRED" || data.summary.status === "BLOCKED";
-
-  const submissionStatus = session?.submission_status ?? "AWAITING_SUPPLIER_UPLOAD";
-  const statusBadge = STATUS_BADGE[submissionStatus];
+    (data.summary?.status === "ACTION_REQUIRED" || data.summary?.status === "BLOCKED");
 
   return (
     <HighlightProvider>
@@ -367,7 +425,7 @@ export default function HomePage() {
               <span className="font-semibold text-gray-900 font-mono">#{data.shipment_ref}</span>
               <span>·</span>
               <span>
-                {m.port_of_loading} → {m.port_of_discharge}
+                {m?.port_of_loading || "INMUN1"} → {m?.port_of_discharge || "USLAX"}
               </span>
               {auditCount > 0 && (
                 <span className="text-[10px] text-gray-400 font-mono">(audit #{auditCount})</span>
@@ -376,24 +434,22 @@ export default function HomePage() {
 
             {/* Overall Status Badge */}
             <div
-              className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
-                isStatusBlocked
+              className={`px-2.5 py-1 rounded-full text-xs font-bold border ${isStatusBlocked
                   ? "bg-rose-50 text-rose-800 border-rose-300"
                   : data.summary.status === "CLEARED_WITH_EXCEPTIONS"
-                  ? "bg-amber-50 text-amber-800 border-amber-300"
-                  : "bg-emerald-50 text-emerald-800 border-emerald-300"
-              }`}
+                    ? "bg-amber-50 text-amber-800 border-amber-300"
+                    : "bg-emerald-50 text-emerald-800 border-emerald-300"
+                }`}
             >
               {data.summary.status}
             </div>
 
             {health && (
               <div
-                className={`hidden md:flex px-2 py-0.5 rounded text-[11px] font-medium border ${
-                  health.status === "ok"
+                className={`hidden md:flex px-2 py-0.5 rounded text-[11px] font-medium border ${health.status === "ok"
                     ? "bg-blue-50 text-blue-700 border-blue-200"
                     : "bg-gray-100 text-gray-600 border-gray-200"
-                }`}
+                  }`}
                 title={`Backend: ${health.gemini_model}, Key: ${health.api_key_configured ? "✓" : "✗"}`}
               >
                 Engine: {health.status.toUpperCase()}
@@ -401,44 +457,57 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Center: Supplier Session Status */}
+          {/* Center: Session Token & Revision Badge */}
           <div className="flex items-center gap-3">
-            {/* Active Token */}
-            <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg">
-              <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Token</span>
-              <span className="font-mono text-xs font-bold text-indigo-900">{ACTIVE_TOKEN}</span>
-            </div>
+            {data.session_token ? (
+              <>
+                <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg">
+                  <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">
+                    Token
+                  </span>
+                  <span className="font-mono text-xs font-bold text-indigo-900 max-w-[120px] truncate">
+                    {data.session_token}
+                  </span>
+                </div>
 
-            {/* Submission Status */}
-            <div
-              className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${statusBadge.cls}`}
-            >
-              {statusBadge.label}
-            </div>
+                <div className="px-2.5 py-1 rounded-full text-[11px] font-bold border bg-blue-100 text-blue-800 border-blue-300 font-mono">
+                  Revision #v{data.revision_number}
+                </div>
 
-            {/* Sync indicator */}
-            {lastSynced && (
-              <div className="text-[10px] text-gray-400 font-mono">
-                synced {lastSynced}
-              </div>
+                {lastSynced && (
+                  <button
+                    type="button"
+                    onClick={() => syncSession(data.session_token)}
+                    title="Click to sync latest status from supplier"
+                    className="text-[10px] text-gray-500 hover:text-gray-800 font-mono flex items-center gap-1 transition-colors"
+                  >
+                    <span className={isSyncing ? "animate-spin" : ""}>🔄</span>
+                    <span>synced {lastSynced}</span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="text-xs text-gray-400 italic">No active session</div>
             )}
           </div>
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 relative">
-            {/* Generate / Copy Supplier Magic Link */}
+            {/* Copy Supplier Revision Link */}
             <button
               type="button"
+              disabled={!data.session_token}
               onClick={() => setShowMagicPopover((v) => !v)}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors text-xs flex items-center gap-1.5 shadow-sm"
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold py-1.5 px-3 rounded-lg transition-colors text-xs flex items-center gap-1.5 shadow-sm"
             >
               <span>🔗</span>
-              <span>Supplier Magic Link</span>
+              <span>Copy Supplier Revision Link</span>
             </button>
 
-            {showMagicPopover && (
+            {showMagicPopover && data.session_token && (
               <MagicLinkPopover
-                token={ACTIVE_TOKEN}
+                token={data.session_token}
+                revisionNumber={data.revision_number}
                 onClose={() => setShowMagicPopover(false)}
               />
             )}
@@ -449,8 +518,9 @@ export default function HomePage() {
               className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-1.5 px-3 rounded-lg transition-colors text-xs border border-gray-300 flex items-center gap-1"
             >
               <span>+</span>
-              <span>Custom Packet</span>
+              <span>Upload 3-Document Packet</span>
             </button>
+
             <button
               type="button"
               onClick={() => handleRunAudit(true)}
@@ -464,10 +534,7 @@ export default function HomePage() {
 
         {/* Click outside to close popover */}
         {showMagicPopover && (
-          <div
-            className="fixed inset-0"
-            onClick={() => setShowMagicPopover(false)}
-          />
+          <div className="fixed inset-0" onClick={() => setShowMagicPopover(false)} />
         )}
 
         {/* ── Buyer Workbench Context Banner ── */}
@@ -477,15 +544,14 @@ export default function HomePage() {
               Buyer Workbench
             </span>
             <span>
-              <b>Pacific Coast Retail Group LLC (Los Angeles, CA, USA)</b> — Import Compliance, PO
-              Matching & Evidence-Backed Resolution
+              <b>{m?.importer_name || "Pacific Coast Retail Group LLC"}</b> — Import Compliance, PO Matching & Evidence-Backed Resolution
             </span>
           </div>
           <div className="flex items-center gap-3 text-blue-200 text-[11px] font-mono">
             <span>Mode: US Import PO Matching & Broker Entry Clearance</span>
-            {session?.latest_audit && (
+            {data.session_token && (
               <span className="bg-blue-800 px-2 py-0.5 rounded text-blue-100">
-                Supplier audit: {session.latest_audit.summary.total_findings} finding(s)
+                Session: {data.session_token} (rev v{data.revision_number})
               </span>
             )}
           </div>
@@ -495,11 +561,7 @@ export default function HomePage() {
         <div className="flex flex-1 overflow-hidden">
           {/* Left Pane: Document Viewer */}
           <div className="flex-1 overflow-hidden">
-            <DocumentViewer
-              data={data}
-              isFixed={isFixed}
-              decisionTrail={decisionTrail}
-            />
+            <DocumentViewer data={data} isFixed={isFixed} decisionTrail={decisionTrail} />
           </div>
 
           {/* Right Pane: Audit Sidebar */}
