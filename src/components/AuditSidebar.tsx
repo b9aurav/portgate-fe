@@ -57,9 +57,11 @@ export function AuditSidebar({
       <div className="h-full overflow-y-auto bg-white p-6 space-y-6">
         {/* Value Proposition */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 space-y-2">
-          <div className="flex items-center gap-2 text-lg font-bold text-gray-900">
-            <img src="/logo.png" alt="PortGate" className="w-6 h-6 rounded-md shadow-xs object-contain" />
-            <span>PortGate Compliance Engine</span>
+          <div className="flex items-center gap-2">
+            <img src="/portgate-lockup.png" alt="PortGate" className="h-6 w-auto object-contain" />
+            <span className="text-xs font-bold text-blue-900 bg-blue-100 px-2 py-0.5 rounded font-mono">
+              Compliance Engine
+            </span>
           </div>
           <div className="text-sm text-gray-700 leading-relaxed">
             Pre-Shipment 3-Way Customs Compliance Engine for the India→US trade corridor. Upload your

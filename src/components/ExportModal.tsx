@@ -40,17 +40,18 @@ export function ExportModal({
         {/* Header */}
         <div className="border-b border-gray-200 p-6 bg-gradient-to-r from-gray-50 to-white">
           <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src="/logo.png" alt="PortGate" className="w-8 h-8 rounded-lg shadow-xs object-contain" />
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Verified Export Package
-                  </h2>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Shipment #{data?.shipment_ref || "—"} · {data?.metadata?.port_of_loading || "INMUN1"} → {data?.metadata?.port_of_discharge || "USLAX"}
-                  </p>
-                </div>
+            <div className="flex items-center gap-3">
+              <img src="/portgate-lockup.png" alt="PortGate" className="h-7 w-auto object-contain" />
+              <div className="h-6 w-px bg-gray-300" />
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Verified Export Package
+                </h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Shipment #{data?.shipment_ref || "—"} · {data?.metadata?.port_of_loading || "INMUN1"} → {data?.metadata?.port_of_discharge || "USLAX"}
+                </p>
               </div>
+            </div>
               <button
                 type="button"
                 onClick={onClose}

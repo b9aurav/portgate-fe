@@ -94,8 +94,9 @@ trailer<</Root 1 0 R>>
         <div className="border-b border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="PortGate" className="w-7 h-7 rounded-lg shadow-xs object-contain" />
-              <h2 className="text-2xl font-bold text-gray-900">Upload PDF Packet</h2>
+              <img src="/portgate-lockup.png" alt="PortGate" className="h-6 w-auto object-contain" />
+              <div className="h-4 w-px bg-gray-300" />
+              <h2 className="text-xl font-bold text-gray-900">Upload PDF Packet</h2>
             </div>
             <button
               type="button"

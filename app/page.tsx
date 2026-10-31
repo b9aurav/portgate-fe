@@ -408,20 +408,19 @@ export default function HomePage() {
         <nav className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-xs z-10 relative">
           {/* Left: Logo + Shipment Info */}
           <div className="flex items-center gap-5">
-              <div className="flex items-center gap-2.5">
-                <img
-                  src="/logo.png"
-                  alt="PortGate Logo"
-                  className="w-7 h-7 rounded-lg shadow-xs object-contain"
-                />
-                <span className="text-xl font-black text-slate-900 tracking-tight">PortGate</span>
-                <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">
-                  v2.5
-                </span>
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono border border-slate-200">
-                  US Buyer Exception Workbench
-                </span>
-              </div>
+            <div className="flex items-center gap-2.5">
+              <img
+                src="/portgate-lockup.png"
+                alt="PortGate"
+                className="h-7 w-auto object-contain"
+              />
+              <span className="text-[10px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-mono">
+                v2.5
+              </span>
+              <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-mono border border-slate-200">
+                US Buyer Exception Workbench
+              </span>
+            </div>
 
               <div className="h-4 w-px bg-gray-300" />
 

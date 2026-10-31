@@ -695,16 +695,13 @@ export default function SupplierUploadPage({
           <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <img
-                src="/logo.png"
-                alt="PortGate Logo"
-                className="w-8 h-8 rounded-lg shadow-sm object-contain"
+                src="/portgate-lockup-white.png"
+                alt="PortGate"
+                className="h-8 w-auto object-contain"
               />
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-black text-white tracking-tight">PortGate</span>
-                <span className="text-[10px] font-bold bg-indigo-700 text-indigo-100 px-1.5 py-0.5 rounded font-mono">
-                  v2.5
-                </span>
-              </div>
+              <span className="text-[10px] font-bold bg-indigo-700 text-indigo-100 px-1.5 py-0.5 rounded font-mono">
+                v2.5
+              </span>
               <div className="h-5 w-px bg-indigo-700" />
               <div className="text-[11px] bg-indigo-700/50 border border-indigo-500 px-2.5 py-1 rounded-full font-semibold tracking-wide">
                 🔐 Zero-Login Supplier Portal · Revision Flow
