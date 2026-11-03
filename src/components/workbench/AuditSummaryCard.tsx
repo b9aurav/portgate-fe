@@ -28,7 +28,15 @@ export function AuditSummaryCard({
 
   const unresolvedCritical = items.filter(
     (it) =>
-      it.sev === "crit" &&
+      (it.sev === "crit" || it.severity === "CRITICAL") &&
+      (!it.resolution_state ||
+        it.resolution_state === "UNRESOLVED" ||
+        it.resolution_state === "REVISION_REQUESTED")
+  ).length;
+
+  const unresolvedWarning = items.filter(
+    (it) =>
+      (it.sev === "warn" || it.severity === "WARNING") &&
       (!it.resolution_state ||
         it.resolution_state === "UNRESOLVED" ||
         it.resolution_state === "REVISION_REQUESTED")
@@ -75,11 +83,11 @@ export function AuditSummaryCard({
         {/* Metrics Bar */}
         <div className="mt-2.5 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-mono">
           <span className="font-semibold text-rose-700">
-            {summary.critical_count} critical
+            {unresolvedCritical} critical
           </span>
           <span className="text-slate-300">·</span>
           <span className="font-semibold text-amber-700">
-            {summary.warning_count} warning
+            {unresolvedWarning} warning
           </span>
           <span className="text-slate-300">·</span>
           <span className="font-semibold text-emerald-700">

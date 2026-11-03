@@ -10,9 +10,6 @@ import {
   Check,
   RefreshCw,
   UploadCloud,
-  AlertOctagon,
-  ShieldCheck,
-  AlertTriangle,
   ChevronDown,
   X,
   Copy,
@@ -47,7 +44,6 @@ export function TopNavbar({
   const [showSwitcher, setShowSwitcher] = useState(false);
 
   const m = data.metadata || ({} as any);
-  const status = data.summary?.status || "ACTION_REQUIRED";
   const token = data.session_token || currentSessionToken || "";
   const rev = data.revision_number || 1;
 
@@ -79,17 +75,14 @@ export function TopNavbar({
     }
   };
 
-  const isBlocked = status === "ACTION_REQUIRED" || status === "BLOCKED";
-  const isExceptions = status === "CLEARED_WITH_EXCEPTIONS";
-
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 relative select-none">
-      {/* ── Left Zone: Logo + Breadcrumbs + Shipment Quick Switcher ── */}
-      <div className="flex items-center gap-3">
+    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 relative select-none whitespace-nowrap">
+      {/* ── Left Zone: Logo + Breadcrumbs + Compact Shipment Switcher ── */}
+      <div className="flex items-center gap-3 whitespace-nowrap min-w-0">
         {/* Brand Logo & Wordmark (Navigates to Dashboard) */}
         <Link
           href="/"
-          className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 hover:opacity-90 transition-opacity shrink-0"
           title="Return to PortGate Queue Dashboard"
         >
           <img
@@ -100,37 +93,37 @@ export function TopNavbar({
         </Link>
 
         {/* Divider */}
-        <div className="h-5 w-px bg-slate-200" />
+        <div className="h-4 w-px bg-slate-200 shrink-0" />
 
         {/* Breadcrumb Back Link */}
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors py-1 px-1.5 rounded hover:bg-slate-100"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors py-1 px-1.5 rounded hover:bg-slate-100 whitespace-nowrap shrink-0"
           title="Back to All Shipments Queue"
         >
           <ArrowLeft className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
-          <span>All Shipments</span>
+          <span className="whitespace-nowrap">All Shipments</span>
         </Link>
 
         {/* Divider */}
-        <div className="h-5 w-px bg-slate-200" />
+        <div className="h-4 w-px bg-slate-200 shrink-0" />
 
         {/* Lightweight Quick-Jump Shipment Switcher Dropdown */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             type="button"
             onClick={() => setShowSwitcher((p) => !p)}
-            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer text-xs"
+            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer text-xs whitespace-nowrap"
             title="Click to quickly jump to another active container"
           >
-            <span className="font-mono font-bold text-slate-900">
+            <span className="font-mono font-bold text-slate-900 whitespace-nowrap">
               #{data.shipment_ref || "SHP-2026-8841"}
             </span>
             <span className="text-slate-300">·</span>
-            <span className="text-slate-600 font-medium">
+            <span className="text-slate-600 font-medium whitespace-nowrap">
               {m?.po_number || "PO-45012"}
             </span>
-            <span className="text-[10px] font-mono font-semibold text-slate-600 bg-white border border-slate-200 px-1.5 py-0.2 rounded">
+            <span className="text-[10px] font-mono font-semibold text-slate-600 bg-white border border-slate-200 px-1.5 py-0.2 rounded whitespace-nowrap">
               Rev v{rev}
             </span>
             <ChevronDown
@@ -143,7 +136,7 @@ export function TopNavbar({
           {showSwitcher && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setShowSwitcher(false)} />
-              <div className="absolute left-0 top-11 z-40 w-84 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 font-sans">
+              <div className="absolute left-0 top-11 z-40 w-84 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 font-sans whitespace-normal">
                 <div className="px-3.5 py-2.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                   <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                     Switch Active Shipment ({shipments.length || 1})
@@ -151,31 +144,17 @@ export function TopNavbar({
                   <Link
                     href="/"
                     onClick={() => setShowSwitcher(false)}
-                    className="text-[11px] text-indigo-600 hover:text-indigo-700 font-medium"
+                    className="text-[11px] text-indigo-600 hover:text-indigo-700 font-medium whitespace-nowrap"
                   >
                     All Shipments →
                   </Link>
                 </div>
 
                 <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
-                  {(shipments.length > 0
-                    ? shipments
-                    : [
-                      {
-                        session_token: token || "shreeji-po-9921",
-                        shipment_id: data.shipment_ref || "SHP-2026-8841",
-                        po_number: m?.po_number || "PO-PCR-45012",
-                        exporter_name: m?.exporter_name || "Shreeji Textiles & Apparel",
-                        status: status,
-                        unresolved_count: data.summary?.unresolved_count ?? 3,
-                        revision_number: rev,
-                      } as any,
-                    ]
-                  ).map((s) => {
+                  {shipments.map((s) => {
                     const isCurrent = s.session_token === token;
                     const isAction = s.status === "ACTION_REQUIRED";
                     const isAwaiting = s.status === "AWAITING_SUPPLIER_REVISION";
-
                     return (
                       <button
                         key={s.session_token}
@@ -186,14 +165,16 @@ export function TopNavbar({
                             router.push(`/shipments/${s.session_token}`);
                           }
                         }}
-                        className={`w-full text-left px-3.5 py-2.5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2.5 cursor-pointer ${isCurrent ? "bg-indigo-50/50" : ""
-                          }`}
+                        className={`w-full text-left px-3.5 py-2.5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2.5 cursor-pointer ${
+                          isCurrent ? "bg-indigo-50/50" : ""
+                        }`}
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${isAction ? "bg-rose-500" : isAwaiting ? "bg-amber-500" : "bg-emerald-500"
-                                }`}
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                isAction ? "bg-rose-500" : isAwaiting ? "bg-amber-500" : "bg-emerald-500"
+                              }`}
                             />
                             <span className="font-mono text-xs font-bold text-slate-900 truncate">
                               #{s.shipment_id}
@@ -208,12 +189,13 @@ export function TopNavbar({
 
                         <div className="text-right shrink-0">
                           <span
-                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${isAction
-                              ? "bg-rose-50 text-rose-700 border-rose-200"
-                              : isAwaiting
+                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
+                              isAction
+                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : isAwaiting
                                 ? "bg-amber-50 text-amber-700 border-amber-200"
                                 : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              }`}
+                            }`}
                           >
                             {s.unresolved_count > 0 ? `${s.unresolved_count} issues` : "Clear"}
                           </span>
@@ -231,34 +213,15 @@ export function TopNavbar({
         </div>
 
         {/* Route Corridor Pill */}
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-mono font-medium">
+        <div className="hidden xl:inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-mono font-medium whitespace-nowrap shrink-0">
           <span>{m?.port_of_loading || "INMUN1"}</span>
           <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={2} />
           <span>{m?.port_of_discharge || "USLAX"}</span>
         </div>
-
-        {/* Semantic Status Badge */}
-        <div
-          className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 border transition-all ${isBlocked
-            ? "bg-rose-50 text-rose-700 border-rose-200"
-            : isExceptions
-              ? "bg-amber-50 text-amber-700 border-amber-200"
-              : "bg-emerald-50 text-emerald-700 border-emerald-200"
-            }`}
-        >
-          {isBlocked ? (
-            <AlertOctagon className="w-3.5 h-3.5 text-rose-600 shrink-0" strokeWidth={2} />
-          ) : isExceptions ? (
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" strokeWidth={2} />
-          ) : (
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" strokeWidth={2} />
-          )}
-          <span>{status.replace(/_/g, " ")}</span>
-        </div>
       </div>
 
-      {/* ── Right Zone: Sync + Copy Supplier Link + New Audit CTA ── */}
-      <div className="flex items-center gap-3">
+      {/* ── Right Zone: Sync + 2-Part Split Button + New Audit CTA ── */}
+      <div className="flex items-center gap-3 whitespace-nowrap shrink-0">
         {/* 1. Sync Status Button */}
         {token && (
           <button
@@ -266,83 +229,62 @@ export function TopNavbar({
             onClick={onSync}
             disabled={isSyncing}
             title="Click to sync session status from supplier"
-            className="text-xs text-slate-600 hover:text-slate-900 font-medium px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors inline-flex items-center gap-1.5 border border-transparent hover:border-slate-200 cursor-pointer"
+            className="text-xs text-slate-500 hover:text-slate-800 font-medium px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors inline-flex items-center gap-1.5 border border-transparent hover:border-slate-200 cursor-pointer whitespace-nowrap shrink-0"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 text-slate-500 shrink-0 ${isSyncing ? "animate-spin text-indigo-600" : ""}`}
               strokeWidth={1.75}
             />
-            <span className="font-mono text-[11px]">
+            <span className="font-mono text-[11px] whitespace-nowrap">
               {lastSynced ? `Synced ${lastSynced}` : "Sync"}
             </span>
           </button>
         )}
 
-        {/* 2. Primary Supplier Action: Split Button (Copy Link | Copy Message Notice) */}
-        <div className="relative inline-flex items-center rounded-lg shadow-xs">
-          {/* Main Action: Copy Link */}
+        {/* 2. Sleek 2-Part Split Button for Supplier Revision Link & Notice */}
+        <div className="relative inline-flex items-center rounded-lg shadow-2xs shrink-0 whitespace-nowrap">
+          {/* Main Action: Copy Revision Link */}
           <button
             type="button"
             disabled={!token}
             onClick={handleCopy}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-3 py-2 rounded-l-lg border-r border-indigo-500 inline-flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Copy raw supplier revision URL to clipboard"
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-3 py-2 rounded-l-lg inline-flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
+            title="Copy zero-login supplier revision URL to clipboard"
           >
             {copied ? (
               <>
-                <Check className="w-3.5 h-3.5 text-emerald-300" strokeWidth={2} />
-                <span>Link Copied!</span>
+                <Check className="w-3.5 h-3.5 text-emerald-300 shrink-0" strokeWidth={2} />
+                <span className="whitespace-nowrap">Link Copied!</span>
               </>
             ) : (
               <>
                 <Link2 className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
-                <span>Copy Supplier Revision Link</span>
+                <span className="whitespace-nowrap">Copy Revision Link</span>
               </>
             )}
           </button>
 
-          {/* Secondary Action: Copy Message / Email Notice */}
-          <button
-            type="button"
-            disabled={!token}
-            onClick={handleCopyBrief}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-2.5 py-2 border-r border-indigo-500 inline-flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Copy pre-formatted Message / Email Discrepancy Brief"
-          >
-            {copiedBrief ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-emerald-300" strokeWidth={2} />
-                <span className="hidden lg:inline text-emerald-200">Notice Copied!</span>
-              </>
-            ) : (
-              <>
-                <MessageSquareText className="w-3.5 h-3.5 shrink-0 text-indigo-200" strokeWidth={2} />
-                <span className="hidden lg:inline">Copy Notice</span>
-              </>
-            )}
-          </button>
-
-          {/* Popover trigger chevron */}
+          {/* Attached Right Chevron: Opens WhatsApp / Email Notice Popover */}
           <button
             type="button"
             disabled={!token}
             onClick={() => setShowPopover((prev) => !prev)}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-2 py-2 rounded-r-lg inline-flex items-center transition-all cursor-pointer"
-            title="View revision link & Message notice options"
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-2 py-2 rounded-r-lg border-l border-indigo-500 inline-flex items-center transition-all cursor-pointer shrink-0 whitespace-nowrap"
+            title="Options: Copy WhatsApp / Email Discrepancy Notice"
           >
             <ChevronDown
               className={`w-3.5 h-3.5 text-indigo-200 transition-transform ${showPopover ? "rotate-180" : ""}`}
             />
           </button>
 
-          {/* Popover */}
+          {/* Notice & Share Popover */}
           {showPopover && token && (
             <>
               <div
                 className="fixed inset-0 z-30"
                 onClick={() => setShowPopover(false)}
               />
-              <div className="absolute right-0 top-12 z-40 w-[420px] bg-white border border-slate-200 rounded-xl shadow-xl p-5 space-y-4">
+              <div className="absolute right-0 top-12 z-40 w-[420px] bg-white border border-slate-200 rounded-xl shadow-xl p-5 space-y-4 whitespace-normal font-sans text-left">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <img src="/logo.png" alt="PortGate" className="w-5 h-5 rounded object-contain" />
@@ -419,7 +361,7 @@ export function TopNavbar({
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
                       <MessageSquareText className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Message / Email Notice Preview</span>
+                      <span>WhatsApp / Email Notice Preview</span>
                     </label>
                     <button
                       type="button"
@@ -452,11 +394,11 @@ export function TopNavbar({
         <button
           type="button"
           onClick={onOpenUploadModal}
-          className="border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs px-3 py-2 rounded-lg shadow-2xs inline-flex items-center gap-1.5 transition-all cursor-pointer"
+          className="border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs px-3 py-2 rounded-lg shadow-2xs inline-flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shrink-0"
           title="Upload 3-PDF packet for compliance linting"
         >
-          <UploadCloud className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={1.75} />
-          <span>New Audit</span>
+          <UploadCloud className="w-3.5 h-3.5 text-slate-500 shrink-0" strokeWidth={1.75} />
+          <span className="whitespace-nowrap">New Audit</span>
         </button>
       </div>
     </header>

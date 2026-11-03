@@ -92,7 +92,7 @@ export function DiscrepancyCard({
           ? "ring-2 ring-indigo-500 shadow-md bg-white border-indigo-300"
           : "bg-white hover:border-slate-300 border-slate-200 shadow-xs"
       } ${
-        state === "ACCEPTED_EXCEPTION"
+        state === "ACCEPTED_EXCEPTION" || state === "CLEARED_BY_REVISION"
           ? "border-l-4 border-l-emerald-600 bg-emerald-50/20"
           : state === "ESCALATED_TO_BROKER"
           ? "border-l-4 border-l-sky-600 bg-sky-50/20"
@@ -122,7 +122,12 @@ export function DiscrepancyCard({
           </div>
 
           <div className="flex items-center gap-1 text-[11px] font-semibold">
-            {sev === "crit" ? (
+            {state === "CLEARED_BY_REVISION" ? (
+              <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1 text-[10px] font-bold">
+                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" strokeWidth={2.5} />
+                <span>CLEARED IN REVISION</span>
+              </span>
+            ) : sev === "crit" ? (
               <span className="text-rose-700 flex items-center gap-1">
                 <AlertOctagon className="w-3.5 h-3.5 text-rose-600 shrink-0" strokeWidth={2} />
                 <span>CRITICAL</span>
@@ -170,7 +175,7 @@ export function DiscrepancyCard({
           {state !== "UNRESOLVED" ? (
             <div
               className={`p-2.5 rounded-lg border text-xs space-y-1.5 ${
-                state === "ACCEPTED_EXCEPTION"
+                state === "ACCEPTED_EXCEPTION" || state === "CLEARED_BY_REVISION"
                   ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                   : state === "ESCALATED_TO_BROKER"
                   ? "bg-sky-50 border-sky-200 text-sky-900"
@@ -179,7 +184,7 @@ export function DiscrepancyCard({
             >
               <div className="flex items-center justify-between">
                 <span className="font-semibold inline-flex items-center gap-1.5">
-                  {state === "ACCEPTED_EXCEPTION" ? (
+                  {state === "ACCEPTED_EXCEPTION" || state === "CLEARED_BY_REVISION" ? (
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" strokeWidth={2} />
                   ) : state === "ESCALATED_TO_BROKER" ? (
                     <Scale className="w-3.5 h-3.5 text-sky-600 shrink-0" strokeWidth={2} />
@@ -187,7 +192,9 @@ export function DiscrepancyCard({
                     <Send className="w-3.5 h-3.5 text-purple-600 shrink-0" strokeWidth={2} />
                   )}
                   <span>
-                    {state === "ACCEPTED_EXCEPTION"
+                    {state === "CLEARED_BY_REVISION"
+                      ? "Cleared by Supplier Upload"
+                      : state === "ACCEPTED_EXCEPTION"
                       ? "Commercial Variance Accepted"
                       : state === "ESCALATED_TO_BROKER"
                       ? "Escalated to Customs Broker"

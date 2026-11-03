@@ -230,7 +230,7 @@ export function UploadPacketModal({
                 min="0"
                 max="25"
                 step="0.5"
-                value={Number.isFinite(tolerancePct) ? tolerancePct : 5.0}
+                value={Number.isFinite(tolerancePct) ? tolerancePct : ""}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value);
                   setTolerancePct(Number.isFinite(val) ? val : 0);

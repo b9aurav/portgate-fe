@@ -16,7 +16,8 @@ export type ResolutionState =
   | "UNRESOLVED"
   | "REVISION_REQUESTED"
   | "ACCEPTED_EXCEPTION"
-  | "ESCALATED_TO_BROKER";
+  | "ESCALATED_TO_BROKER"
+  | "CLEARED_BY_REVISION";
 
 export type AuditOverallStatus =
   | "ACTION_REQUIRED"
@@ -229,6 +230,8 @@ export interface AuditResponse {
   cartons: CartonsOut;
   items: DiscrepancyItem[];
   passed: string[];
+  updated_at?: string;
+  auto_resolved_in_latest_rev?: string[];
 }
 
 export interface HealthResponse {
