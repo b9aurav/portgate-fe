@@ -143,7 +143,7 @@ function SupplierPortalContent() {
         {/* Right Pane: Supplier 2-File Dropzone & Discrepancy Queue */}
         <div className="w-[440px] bg-white flex flex-col overflow-hidden shadow-xs border-l border-slate-200">
           {/* 2-File Dropzone Card */}
-          <div className="p-4 border-b border-slate-200">
+          <div className="p-3 border-b border-slate-200">
             <SupplierRevisionDropzone
               token={token}
               onAuditComplete={handleAuditComplete}

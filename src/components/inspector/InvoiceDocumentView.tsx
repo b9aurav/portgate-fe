@@ -62,7 +62,7 @@ export function InvoiceDocumentView({
         <div className="flex items-start justify-between">
           <div>
             <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-sans">
-              Shipper / Manufacturer (Exporter)
+              SHIPPER / EXPORTER OF RECORD
             </div>
             <div className="font-bold text-slate-900 text-sm">{m?.exporter_name || "—"}</div>
             <div className="text-slate-600">{m?.exporter_street || ""}</div>

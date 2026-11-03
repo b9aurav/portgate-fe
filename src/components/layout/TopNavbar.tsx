@@ -165,7 +165,7 @@ export function TopNavbar({
                 </div>
 
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Share this zero-login link with your Indian supplier. They can inspect
+                  Share this zero-login link with your supplier. They can inspect
                   discrepancies against your locked Buyer PO and upload revised documents.
                 </p>
 

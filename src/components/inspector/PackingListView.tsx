@@ -44,7 +44,7 @@ export function PackingListView({ data }: PackingListViewProps) {
       <div className="grid grid-cols-2 gap-6 bg-slate-50/70 border border-slate-200 rounded-lg p-4">
         <div>
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-sans">
-            Shipper / Manufacturer
+            SHIPPER / EXPORTER OF RECORD
           </div>
           <div className="font-bold text-slate-900">{m?.exporter_name || "—"}</div>
           <div className="text-slate-600">
