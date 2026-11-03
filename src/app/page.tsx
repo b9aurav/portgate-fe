@@ -17,9 +17,11 @@ import {
   RefreshCw,
   Filter,
   Trash2,
+  MessageSquareText,
 } from "lucide-react";
 import { UploadPacketModal } from "@/components/layout/UploadPacketModal";
-import { deleteShipment, getShipments } from "@/lib/api";
+import { deleteShipment, getSession, getShipments } from "@/lib/api";
+import { generateDiscrepancyBrief } from "@/lib/briefGenerator";
 import type { AuditResponse, ShipmentListItem } from "@/lib/types";
 
 type StatusFilter = "ALL" | "ACTION_REQUIRED" | "AWAITING_SUPPLIER" | "CLEARED";
@@ -35,6 +37,7 @@ export default function ShipmentQueueDashboard() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [copiedNoticeToken, setCopiedNoticeToken] = useState<string | null>(null);
 
   // ── Fetch Shipments ───────────────────────────────────────────────────────
   const fetchShipments = useCallback(async (isBackground = false) => {
@@ -172,6 +175,27 @@ export default function ShipmentQueueDashboard() {
     }
   };
 
+  // ── Copy Message / Email Notice Brief ────────────────────────────────────
+  const handleCopyNotice = async (e: React.MouseEvent, row: ShipmentListItem) => {
+    e.stopPropagation();
+    let fullAudit: AuditResponse | null = null;
+    try {
+      fullAudit = await getSession(row.session_token);
+    } catch (err) {
+      console.warn("Could not fetch full audit for notice, using summary:", err);
+    }
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+    const brief = generateDiscrepancyBrief(fullAudit, row, origin);
+    try {
+      await navigator.clipboard.writeText(brief);
+      setCopiedNoticeToken(row.session_token);
+      setTimeout(() => setCopiedNoticeToken(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy brief notice:", err);
+    }
+  };
+
   // ── Delete Test Shipment Run ─────────────────────────────────────────────
   const handleDeleteShipment = async (e: React.MouseEvent, token: string) => {
     e.stopPropagation();
@@ -244,11 +268,10 @@ export default function ShipmentQueueDashboard() {
           {/* Card 1: Total Active Shipments */}
           <div
             onClick={() => setStatusFilter("ALL")}
-            className={`p-4 rounded-xl border bg-white shadow-xs transition-all cursor-pointer select-none ${
-              statusFilter === "ALL"
+            className={`p-4 rounded-xl border bg-white shadow-xs transition-all cursor-pointer select-none ${statusFilter === "ALL"
                 ? "border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm"
                 : "border-slate-200 hover:border-slate-300"
-            }`}
+              }`}
           >
             <div className="flex items-center justify-between text-slate-500 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -272,15 +295,14 @@ export default function ShipmentQueueDashboard() {
           {/* Card 2: Action Required (Buyer) */}
           <div
             onClick={() => setStatusFilter("ACTION_REQUIRED")}
-            className={`p-4 rounded-xl border bg-white shadow-xs transition-all cursor-pointer select-none ${
-              kpis.actionRequiredCount > 0
+            className={`p-4 rounded-xl border bg-white shadow-xs transition-all cursor-pointer select-none ${kpis.actionRequiredCount > 0
                 ? statusFilter === "ACTION_REQUIRED"
                   ? "border-rose-400 ring-2 ring-rose-500/20 bg-rose-50/20 shadow-sm"
                   : "border-rose-200 hover:border-rose-300 bg-rose-50/10"
                 : statusFilter === "ACTION_REQUIRED"
-                ? "border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm"
-                : "border-slate-200 hover:border-slate-300"
-            }`}
+                  ? "border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm"
+                  : "border-slate-200 hover:border-slate-300"
+              }`}
           >
             <div className="flex items-center justify-between text-slate-500 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-rose-700">
@@ -306,15 +328,14 @@ export default function ShipmentQueueDashboard() {
           {/* Card 3: Awaiting Supplier Revision */}
           <div
             onClick={() => setStatusFilter("AWAITING_SUPPLIER")}
-            className={`p-4 rounded-xl border bg-white shadow-xs transition-all cursor-pointer select-none ${
-              kpis.awaitingSupplierCount > 0
+            className={`p-4 rounded-xl border bg-white shadow-xs transition-all cursor-pointer select-none ${kpis.awaitingSupplierCount > 0
                 ? statusFilter === "AWAITING_SUPPLIER"
                   ? "border-amber-400 ring-2 ring-amber-500/20 bg-amber-50/20 shadow-sm"
                   : "border-amber-200 hover:border-amber-300 bg-amber-50/10"
                 : statusFilter === "AWAITING_SUPPLIER"
-                ? "border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm"
-                : "border-slate-200 hover:border-slate-300"
-            }`}
+                  ? "border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm"
+                  : "border-slate-200 hover:border-slate-300"
+              }`}
           >
             <div className="flex items-center justify-between text-slate-500 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-amber-700">
@@ -338,15 +359,14 @@ export default function ShipmentQueueDashboard() {
           {/* Card 4: Cleared for Customs */}
           <div
             onClick={() => setStatusFilter("CLEARED")}
-            className={`p-4 rounded-xl border bg-white shadow-xs transition-all cursor-pointer select-none ${
-              kpis.clearedCount > 0
+            className={`p-4 rounded-xl border bg-white shadow-xs transition-all cursor-pointer select-none ${kpis.clearedCount > 0
                 ? statusFilter === "CLEARED"
                   ? "border-emerald-400 ring-2 ring-emerald-500/20 bg-emerald-50/20 shadow-sm"
                   : "border-emerald-200 hover:border-emerald-300 bg-emerald-50/10"
                 : statusFilter === "CLEARED"
-                ? "border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm"
-                : "border-slate-200 hover:border-slate-300"
-            }`}
+                  ? "border-indigo-400 ring-2 ring-indigo-500/20 shadow-sm"
+                  : "border-slate-200 hover:border-slate-300"
+              }`}
           >
             <div className="flex items-center justify-between text-slate-500 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
@@ -398,44 +418,40 @@ export default function ShipmentQueueDashboard() {
               <button
                 type="button"
                 onClick={() => setStatusFilter("ALL")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${
-                  statusFilter === "ALL"
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${statusFilter === "ALL"
                     ? "bg-indigo-600 text-white shadow-xs"
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 All ({kpis.totalCount})
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter("ACTION_REQUIRED")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${
-                  statusFilter === "ACTION_REQUIRED"
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${statusFilter === "ACTION_REQUIRED"
                     ? "bg-rose-600 text-white shadow-xs"
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 Action Required ({kpis.actionRequiredCount})
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter("AWAITING_SUPPLIER")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${
-                  statusFilter === "AWAITING_SUPPLIER"
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${statusFilter === "AWAITING_SUPPLIER"
                     ? "bg-amber-600 text-white shadow-xs"
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 Awaiting Supplier ({kpis.awaitingSupplierCount})
               </button>
               <button
                 type="button"
                 onClick={() => setStatusFilter("CLEARED")}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${
-                  statusFilter === "CLEARED"
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 ${statusFilter === "CLEARED"
                     ? "bg-emerald-600 text-white shadow-xs"
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-                }`}
+                  }`}
               >
                 Cleared ({kpis.clearedCount})
               </button>
@@ -505,22 +521,22 @@ export default function ShipmentQueueDashboard() {
                     const statusBadgeLabel = isAction
                       ? "ACTION REQUIRED"
                       : isBuyerReview
-                      ? "BUYER REVIEW"
-                      : isAwaiting
-                      ? "AWAITING SUPPLIER V2"
-                      : isClearedExceptions
-                      ? "CLEARED WITH EXCEPTIONS"
-                      : "VERIFIED CLEAN";
+                        ? "BUYER REVIEW"
+                        : isAwaiting
+                          ? "AWAITING SUPPLIER V2"
+                          : isClearedExceptions
+                            ? "CLEARED WITH EXCEPTIONS"
+                            : "VERIFIED CLEAN";
 
                     const statusBadgeClass = isAction
                       ? "bg-rose-50 text-rose-700 border-rose-200"
                       : isBuyerReview
-                      ? "bg-amber-50 text-amber-700 border-amber-200"
-                      : isAwaiting
-                      ? "bg-amber-50 text-amber-700 border-amber-200"
-                      : isClearedExceptions
-                      ? "bg-teal-50 text-teal-700 border-teal-200"
-                      : "bg-emerald-50 text-emerald-700 border-emerald-200";
+                        ? "bg-amber-50 text-amber-700 border-amber-200"
+                        : isAwaiting
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : isClearedExceptions
+                            ? "bg-teal-50 text-teal-700 border-teal-200"
+                            : "bg-emerald-50 text-emerald-700 border-emerald-200";
 
                     const isCopied = copiedToken === row.session_token;
 
@@ -565,11 +581,10 @@ export default function ShipmentQueueDashboard() {
                         {/* 4. Revision */}
                         <td className="py-3.5 px-4 text-center">
                           <span
-                            className={`font-mono text-[11px] px-2 py-0.5 rounded border font-semibold ${
-                              (row.revision_number || 1) > 1
+                            className={`font-mono text-[11px] px-2 py-0.5 rounded border font-semibold ${(row.revision_number || 1) > 1
                                 ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                                 : "bg-slate-50 text-slate-600 border-slate-200"
-                            }`}
+                              }`}
                           >
                             Rev v{row.revision_number || 1}
                           </span>
@@ -620,17 +635,37 @@ export default function ShipmentQueueDashboard() {
                             <button
                               type="button"
                               onClick={(e) => handleCopyLink(e, row.session_token)}
-                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                                isCopied
+                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${isCopied
                                   ? "bg-emerald-50 text-emerald-600 border-emerald-200"
                                   : "text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200"
-                              }`}
+                                }`}
                               title={isCopied ? "Copied!" : "Copy Supplier Magic Link"}
                             >
                               {isCopied ? (
                                 <Check className="w-3.5 h-3.5 text-emerald-600" />
                               ) : (
                                 <Link2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+
+                            {/* Copy Message / Email Notice */}
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopyNotice(e, row)}
+                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${copiedNoticeToken === row.session_token
+                                  ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                  : "text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200"
+                                }`}
+                              title={
+                                copiedNoticeToken === row.session_token
+                                  ? "Notice Copied!"
+                                  : "Copy Message / Email Notice Brief"
+                              }
+                            >
+                              {copiedNoticeToken === row.session_token ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <MessageSquareText className="w-3.5 h-3.5" />
                               )}
                             </button>
 

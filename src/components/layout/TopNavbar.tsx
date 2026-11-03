@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -15,7 +15,10 @@ import {
   AlertTriangle,
   ChevronDown,
   X,
+  Copy,
+  MessageSquareText,
 } from "lucide-react";
+import { generateDiscrepancyBrief } from "@/lib/briefGenerator";
 import type { AuditResponse, ShipmentListItem } from "@/lib/types";
 
 interface TopNavbarProps {
@@ -39,6 +42,7 @@ export function TopNavbar({
 }: TopNavbarProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [copiedBrief, setCopiedBrief] = useState(false);
   const [showPopover, setShowPopover] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
 
@@ -50,6 +54,10 @@ export function TopNavbar({
   const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
   const revisionUrl = token ? `${origin}/upload/${token}` : "";
 
+  const briefText = useMemo(() => {
+    return generateDiscrepancyBrief(data, null, origin);
+  }, [data, origin]);
+
   const handleCopy = async () => {
     if (!revisionUrl) return;
     try {
@@ -58,6 +66,16 @@ export function TopNavbar({
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy link:", err);
+    }
+  };
+
+  const handleCopyBrief = async () => {
+    try {
+      await navigator.clipboard.writeText(briefText);
+      setCopiedBrief(true);
+      setTimeout(() => setCopiedBrief(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy brief:", err);
     }
   };
 
@@ -143,16 +161,16 @@ export function TopNavbar({
                   {(shipments.length > 0
                     ? shipments
                     : [
-                        {
-                          session_token: token || "shreeji-po-9921",
-                          shipment_id: data.shipment_ref || "SHP-2026-8841",
-                          po_number: m?.po_number || "PO-PCR-45012",
-                          exporter_name: m?.exporter_name || "Shreeji Textiles & Apparel",
-                          status: status,
-                          unresolved_count: data.summary?.unresolved_count ?? 3,
-                          revision_number: rev,
-                        } as any,
-                      ]
+                      {
+                        session_token: token || "shreeji-po-9921",
+                        shipment_id: data.shipment_ref || "SHP-2026-8841",
+                        po_number: m?.po_number || "PO-PCR-45012",
+                        exporter_name: m?.exporter_name || "Shreeji Textiles & Apparel",
+                        status: status,
+                        unresolved_count: data.summary?.unresolved_count ?? 3,
+                        revision_number: rev,
+                      } as any,
+                    ]
                   ).map((s) => {
                     const isCurrent = s.session_token === token;
                     const isAction = s.status === "ACTION_REQUIRED";
@@ -168,16 +186,14 @@ export function TopNavbar({
                             router.push(`/shipments/${s.session_token}`);
                           }
                         }}
-                        className={`w-full text-left px-3.5 py-2.5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2.5 cursor-pointer ${
-                          isCurrent ? "bg-indigo-50/50" : ""
-                        }`}
+                        className={`w-full text-left px-3.5 py-2.5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2.5 cursor-pointer ${isCurrent ? "bg-indigo-50/50" : ""
+                          }`}
                       >
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5">
                             <span
-                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                isAction ? "bg-rose-500" : isAwaiting ? "bg-amber-500" : "bg-emerald-500"
-                              }`}
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${isAction ? "bg-rose-500" : isAwaiting ? "bg-amber-500" : "bg-emerald-500"
+                                }`}
                             />
                             <span className="font-mono text-xs font-bold text-slate-900 truncate">
                               #{s.shipment_id}
@@ -192,13 +208,12 @@ export function TopNavbar({
 
                         <div className="text-right shrink-0">
                           <span
-                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
-                              isAction
-                                ? "bg-rose-50 text-rose-700 border-rose-200"
-                                : isAwaiting
+                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${isAction
+                              ? "bg-rose-50 text-rose-700 border-rose-200"
+                              : isAwaiting
                                 ? "bg-amber-50 text-amber-700 border-amber-200"
                                 : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            }`}
+                              }`}
                           >
                             {s.unresolved_count > 0 ? `${s.unresolved_count} issues` : "Clear"}
                           </span>
@@ -224,13 +239,12 @@ export function TopNavbar({
 
         {/* Semantic Status Badge */}
         <div
-          className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 border transition-all ${
-            isBlocked
-              ? "bg-rose-50 text-rose-700 border-rose-200"
-              : isExceptions
+          className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 border transition-all ${isBlocked
+            ? "bg-rose-50 text-rose-700 border-rose-200"
+            : isExceptions
               ? "bg-amber-50 text-amber-700 border-amber-200"
               : "bg-emerald-50 text-emerald-700 border-emerald-200"
-          }`}
+            }`}
         >
           {isBlocked ? (
             <AlertOctagon className="w-3.5 h-3.5 text-rose-600 shrink-0" strokeWidth={2} />
@@ -264,16 +278,61 @@ export function TopNavbar({
           </button>
         )}
 
-        {/* 2. Primary Supplier Action: Copy Revision Link */}
-        <div className="relative">
+        {/* 2. Primary Supplier Action: Split Button (Copy Link | Copy Message Notice) */}
+        <div className="relative inline-flex items-center rounded-lg shadow-xs">
+          {/* Main Action: Copy Link */}
+          <button
+            type="button"
+            disabled={!token}
+            onClick={handleCopy}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-3 py-2 rounded-l-lg border-r border-indigo-500 inline-flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Copy raw supplier revision URL to clipboard"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-300" strokeWidth={2} />
+                <span>Link Copied!</span>
+              </>
+            ) : (
+              <>
+                <Link2 className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                <span>Copy Supplier Revision Link</span>
+              </>
+            )}
+          </button>
+
+          {/* Secondary Action: Copy Message / Email Notice */}
+          <button
+            type="button"
+            disabled={!token}
+            onClick={handleCopyBrief}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-2.5 py-2 border-r border-indigo-500 inline-flex items-center gap-1.5 transition-all cursor-pointer"
+            title="Copy pre-formatted Message / Email Discrepancy Brief"
+          >
+            {copiedBrief ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-300" strokeWidth={2} />
+                <span className="hidden lg:inline text-emerald-200">Notice Copied!</span>
+              </>
+            ) : (
+              <>
+                <MessageSquareText className="w-3.5 h-3.5 shrink-0 text-indigo-200" strokeWidth={2} />
+                <span className="hidden lg:inline">Copy Notice</span>
+              </>
+            )}
+          </button>
+
+          {/* Popover trigger chevron */}
           <button
             type="button"
             disabled={!token}
             onClick={() => setShowPopover((prev) => !prev)}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-3.5 py-2 rounded-lg shadow-xs inline-flex items-center gap-2 transition-all cursor-pointer"
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-2 py-2 rounded-r-lg inline-flex items-center transition-all cursor-pointer"
+            title="View revision link & Message notice options"
           >
-            <Link2 className="w-4 h-4 shrink-0" strokeWidth={2} />
-            <span>Copy Supplier Revision Link</span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-indigo-200 transition-transform ${showPopover ? "rotate-180" : ""}`}
+            />
           </button>
 
           {/* Popover */}
@@ -283,12 +342,12 @@ export function TopNavbar({
                 className="fixed inset-0 z-30"
                 onClick={() => setShowPopover(false)}
               />
-              <div className="absolute right-0 top-12 z-40 w-96 bg-white border border-slate-200 rounded-xl shadow-xl p-5 space-y-4">
+              <div className="absolute right-0 top-12 z-40 w-[420px] bg-white border border-slate-200 rounded-xl shadow-xl p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <img src="/logo.png" alt="PortGate" className="w-5 h-5 rounded object-contain" />
                     <span className="font-semibold text-sm text-slate-900">
-                      Supplier Revision Magic Link
+                      Supplier Revision & Notice
                     </span>
                   </div>
                   <button
@@ -300,8 +359,8 @@ export function TopNavbar({
                 </div>
 
                 <p className="text-xs text-slate-600 leading-relaxed">
-                  Share this zero-login link with your supplier. They can inspect
-                  discrepancies against your locked Buyer PO and upload revised documents.
+                  Share this zero-login link with your exporter to inspect discrepancies
+                  and upload corrected Tally Commercial Invoice / Packing List.
                 </p>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
@@ -323,6 +382,7 @@ export function TopNavbar({
                   </div>
                 </div>
 
+                {/* 1. Raw Magic Link */}
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-semibold text-slate-700">
                     Public Supplier Portal URL
@@ -347,11 +407,41 @@ export function TopNavbar({
                       ) : (
                         <>
                           <Link2 className="w-3.5 h-3.5" strokeWidth={2} />
-                          <span>Copy</span>
+                          <span>Copy Link</span>
                         </>
                       )}
                     </button>
                   </div>
+                </div>
+
+                {/* 2. Message / Email Discrepancy Brief */}
+                <div className="space-y-1.5 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+                      <MessageSquareText className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Message / Email Notice Preview</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleCopyBrief}
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedBrief ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-emerald-600 font-semibold">Copied Notice!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copy Notice</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="text-[11px] font-mono text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-2.5 whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto select-all">
+                    {briefText}
+                  </pre>
                 </div>
               </div>
             </>
