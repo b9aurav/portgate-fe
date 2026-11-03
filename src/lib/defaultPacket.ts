@@ -40,6 +40,8 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
     currency: "USD",
     po_incoterm: "FOB Mundra",
     po_currency: "USD",
+    total_cartons_declared: 100,
+    total_cartons: 110,
   },
   mid_code: "INSHRTEX2301SUR",
   po_lines: [
@@ -98,80 +100,123 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
     inv: [
       [380.0, 420.0],
       [410.0, 450.0],
-      [680.0, 620.0], // ← ERR-03: net > gross
+      [520.0, 490.0], // ← ERR-03: Line 3 net (520) > gross (490)
     ],
     pl: [
       [380.0, 420.0],
       [410.0, 450.0],
-      [580.0, 620.0],
+      [520.0, 490.0],
     ],
   },
   cartons: {
     inv: [40, 30, 30],
-    pl: [40, 30, 38], // ← ERR-03: carton drift on line 3
+    pl: [40, 30, 40],
   },
   items: [
     {
-      id: "ERR-01",
+      id: "DISC-CARTONS",
+      rule_id: "RULE-D01-CARTON-SYNC",
       sev: "crit",
-      category: "COMPLIANCE_ADVISORY",
-      resolution_state: "UNRESOLVED",
-      title: "6-digit HS root clash on Line 1",
-      cells: ["inv-hsn1", "po-hts1"],
-      locs: [
-        ["inv", "Tally invoice"],
-        ["po", "Buyer PO"],
-      ],
-      body: "Line item matched to the corresponding PO SKU, but Tally HSN 6205.20 clashes with PO HTS 6109.10. These map to different tariff chapters and different duty rates.",
-      impact:
-        "Duty-rate variance and a likely CBP CF-28 Request for Information hold. Entry may be liquidated at the incorrect duty rate.",
-      fix: "Supplier re-issues Line 1 with HSN 6109.10.00 to match the PO HTS international root.",
-    },
-    {
-      id: "ERR-02",
-      sev: "crit",
-      category: "COMMERCIAL_VARIANCE",
-      resolution_state: "UNRESOLVED",
-      title: "Unit price overcharge on Line 2",
-      cells: ["inv-rate2", "inv-amt2", "po-price2"],
-      locs: [
-        ["inv", "Tally invoice"],
-        ["po", "Buyer PO"],
-      ],
-      body: "Invoice rate $6.40 exceeds the PO unit price of $6.00 by $0.40 per unit.",
-      impact: "$820.00 unauthorized overcharge across 2,050 PCS.",
-      fix: "Supplier re-bills at $6.00; line amount drops to $12,300.00.",
-    },
-    {
-      id: "ERR-03",
-      sev: "crit",
+      severity: "CRITICAL",
       category: "DETERMINISTIC_CONFLICT",
       resolution_state: "UNRESOLVED",
-      title: "Net/gross weight inversion and carton drift on Line 3",
-      cells: ["inv-net3", "inv-gross3", "inv-ctns", "pl-ct3", "pl-ctns"],
+      title: "Carton Count Mismatch (Invoice vs. Packing List)",
+      cells: ["inv-ctns", "pl-ctns"],
       locs: [
-        ["inv", "Tally invoice"],
-        ["pl", "Packing list"],
+        ["inv", "Commercial Invoice"],
+        ["pl", "Packing List"],
       ],
-      body: "Invoice lists net weight 680.00 kg above gross weight 620.00 kg, which is physically impossible. Cartons differ: 30 CTNS on the invoice vs 38 CTNS on the packing list.",
-      impact:
-        "Guaranteed CBP ACE rejection and a manifest mismatch at discharge port. Carrier may impose D&D charges.",
-      fix: "Supplier corrects net weight to be ≤ gross weight and reconciles carton count across all documents for Line 3.",
+      body: "Commercial Invoice declares 100 cartons, but Packing List totals 110 cartons (10 carton variance). Both documents must agree before shipping bill and customs manifest generation.",
+      impact: "Mismatched carton counts trigger mandatory physical container exams and customs holds.",
+      fix: "Regenerate invoice or packing list in exporter ERP so total carton count is identical.",
+      recommended_actions: [
+        "Verify physical warehouse tally sheet",
+        "Regenerate either Tally Invoice or Packing List so carton counts match",
+      ],
     },
     {
-      id: "WARN-01",
-      sev: "warn",
+      id: "DISC-WEIGHT-INV",
+      rule_id: "RULE-D02-WEIGHT-PHYSICS",
+      sev: "crit",
+      severity: "CRITICAL",
+      category: "DETERMINISTIC_CONFLICT",
+      resolution_state: "UNRESOLVED",
+      title: "Line #3: Physical Weight Inversion (Net 520.0 kg > Gross 490.0 kg)",
+      cells: ["pl-net3", "pl-gross3", "inv-net3", "inv-gross3"],
+      locs: [
+        ["pl", "Packing List"],
+        ["inv", "Commercial Invoice"],
+      ],
+      body: "Line #3 (Cartons 71-110: HEAVYWEIGHT FLEECE PULLOVER HOODIE): Inverted weights declared on Packing List — Net Weight (520.0 kg) exceeds Gross Weight (490.0 kg) by 30.0 kg. Net cargo weight cannot physically exceed carton gross weight.",
+      impact: "CBP ACE entry summary rejection. Cargo will be held at port of entry for scale re-weigh and manifest examination.",
+      fix: "Re-scale Line #3 cartons and swap inverted Net (520.0 kg) vs Gross (490.0 kg) weights.",
+      recommended_actions: [
+        "Request corrected Packing List with accurate tare weights",
+        "Re-scale carton weights at factory before container stuffing",
+      ],
+    },
+    {
+      id: "DISC-PRICE2",
+      rule_id: "RULE-V01-PRICE-MATCH",
+      sev: "crit",
+      severity: "CRITICAL",
       category: "COMMERCIAL_VARIANCE",
       resolution_state: "UNRESOLVED",
-      title: "Split-shipment quantity over open balance (Line 2)",
-      cells: ["inv-qty2", "po-open2"],
+      title: "Unit Price Mismatch (Line 2)",
+      cells: ["po-price2", "inv-rate2"],
       locs: [
-        ["inv", "Tally invoice"],
+        ["inv", "Commercial Invoice"],
         ["po", "Buyer PO"],
       ],
-      body: "Shipped 2,050 PCS exceeds the 2,000 PCS open balance by +2.5%. This is within the buyer's ±5% split-shipment tolerance, so it passes with a flag.",
-      impact: "No action required; recorded in the audit trail.",
-      fix: "Passed via tolerance rule.",
+      body: "Line #2: Commercial Invoice unit rate ($6.40) exceeds agreed Purchase Order unit price ($6.00) by +$0.40/PCS (+6.7% over agreed contract rate).",
+      impact: "Over-billing variance triggers AP payment block and buyer debit memo.",
+      fix: "Supplier must re-issue Commercial Invoice adjusting unit price to $6.00.",
+      recommended_actions: [
+        "Buyer signs off on unit price discrepancy note",
+        "Supplier re-issues Commercial Invoice with corrected unit price $6.00",
+      ],
+    },
+    {
+      id: "DISC-QTY2",
+      rule_id: "RULE-V02-QTY-TOLERANCE",
+      sev: "warn",
+      severity: "WARNING",
+      category: "COMMERCIAL_VARIANCE",
+      resolution_state: "UNRESOLVED",
+      title: "Split-Shipment Quantity Variance (Line 2)",
+      cells: ["po-open2", "inv-qty2"],
+      locs: [
+        ["inv", "Commercial Invoice"],
+        ["po", "Buyer PO"],
+      ],
+      body: "Line #2: Invoiced quantity 2,050 PCS exceeds PO remaining open balance 2,000 PCS by +50 PCS (+2.5%), within allowed +/-5.0% tolerance window.",
+      impact: "Non-critical quantity variance within commercial contractual tolerance.",
+      fix: "Buyer can accept exception or record over-delivery against next replenishment order.",
+      recommended_actions: [
+        "Buyer accepts over-shipment within tolerance",
+        "Adjust remaining PO balance to 0",
+      ],
+    },
+    {
+      id: "DISC-HSN1",
+      rule_id: "RULE-C01-HSN-HTS-ROOT",
+      sev: "crit",
+      severity: "CRITICAL",
+      category: "COMPLIANCE_ADVISORY",
+      resolution_state: "UNRESOLVED",
+      title: "HSN / HTS Classification Mismatch (Line 1)",
+      cells: ["po-hts1", "inv-hsn1"],
+      locs: [
+        ["inv", "Commercial Invoice"],
+        ["po", "Buyer PO"],
+      ],
+      body: "Line #1: 6-digit HS root mismatch between Commercial Invoice HSN (6205.20) and Buyer PO HTS (6109.10). International 6-digit tariff root must agree across trade corridor documents.",
+      impact: "Customs declaration will trigger tariff misclassification hold and duty rate reassessment.",
+      fix: "Exporter must amend invoice HSN to match agreed Buyer PO HTS root 6109.10.",
+      recommended_actions: [
+        "Amend Commercial Invoice HSN code to 6109.10.00",
+        "Request broker advisory classification ruling",
+      ],
     },
   ],
   passed: [
@@ -183,17 +228,14 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
     "Incoterm FOB Mundra consistent across documents",
     "Currency USD on all three documents",
     "Line 1 unit price matches PO ($4.50)",
-    "Line 2 unit price matches PO ($6.00)",
-    "Line 2 partial shipment: 2,050 PCS shipped of 2,000 PCS open balance",
     "Line 3 quantity matches PO (1,000 PCS)",
     "Line 3 unit price matches PO ($11.00)",
-    "Carton count parity: invoice 100 CTNS = packing list 108 CTNS",
   ],
   summary: {
     status: "ACTION_REQUIRED",
-    critical_count: 3,
+    critical_count: 4,
     warning_count: 1,
-    passed_count: 13,
+    passed_count: 10,
   },
 };
 
@@ -263,9 +305,10 @@ export function applySupplierFix(packet: AuditResponse): AuditResponse {
     pl: packet.cartons.pl,
   };
 
-  // Fix metadata: fill LUT ARN if missing, align incoterm
+  // Fix metadata: fill LUT ARN if missing, align incoterm, sync declared cartons
   const fixedMetadata = {
     ...packet.metadata,
+    total_cartons_declared: packet.metadata.total_cartons || 110,
     exporter_lut_arn: packet.metadata.exporter_lut_arn || "AD240426009182Z",
     incoterm:
       packet.metadata.po_incoterm && packet.metadata.incoterm !== packet.metadata.po_incoterm

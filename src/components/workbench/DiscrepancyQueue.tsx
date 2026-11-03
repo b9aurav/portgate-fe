@@ -1,0 +1,154 @@
+"use client";
+
+import React, { useState } from "react";
+import { CheckCircle2, Filter } from "lucide-react";
+import { DiscrepancyCard } from "./DiscrepancyCard";
+import { useHighlight } from "@/context/HighlightContext";
+import type {
+  AuditResponse,
+  DiscrepancyItem,
+  WorkspaceRole,
+} from "@/lib/types";
+
+interface DiscrepancyQueueProps {
+  data: AuditResponse;
+  viewMode: WorkspaceRole;
+  onResolveItem?: (
+    itemId: string,
+    action: "REQUEST_REVISION" | "ACCEPT_VARIANCE" | "ESCALATE_BROKER",
+    reasonChip: string,
+    note?: string
+  ) => void;
+  onSubmitSupplierRevision?: (itemId: string) => void;
+}
+
+export function DiscrepancyQueue({
+  data,
+  viewMode,
+  onResolveItem,
+  onSubmitSupplierRevision,
+}: DiscrepancyQueueProps) {
+  const { setHighlight, setActiveTab, activeId } = useHighlight();
+  const [filter, setFilter] = useState<"ALL" | "CRITICAL" | "WARNING" | "RESOLVED">("ALL");
+
+  const items = data.items || [];
+
+  const criticalItems = items.filter(
+    (it) => it.sev === "crit" || it.severity === "CRITICAL"
+  );
+  const warningItems = items.filter(
+    (it) => it.sev === "warn" || it.severity === "WARNING"
+  );
+  const resolvedItems = items.filter(
+    (it) => it.resolution_state && it.resolution_state !== "UNRESOLVED"
+  );
+
+  const filteredItems = items.filter((item) => {
+    if (filter === "CRITICAL") return item.sev === "crit" || item.severity === "CRITICAL";
+    if (filter === "WARNING") return item.sev === "warn" || item.severity === "WARNING";
+    if (filter === "RESOLVED") return item.resolution_state && item.resolution_state !== "UNRESOLVED";
+    return true;
+  });
+
+  const handleCardClick = (item: DiscrepancyItem) => {
+    const defaultTab = item.locs?.[0]?.[0] || "inv";
+    const cells = item.cells || item.highlight_cells || [];
+    const sev = item.sev || (item.severity === "CRITICAL" ? "crit" : "warn");
+    setHighlight(item.id, cells, sev, defaultTab);
+    setActiveTab(defaultTab);
+  };
+
+  const handleJumpToDoc = (item: DiscrepancyItem, tabKey: string) => {
+    const cells = item.cells || item.highlight_cells || [];
+    const sev = item.sev || (item.severity === "CRITICAL" ? "crit" : "warn");
+    setHighlight(item.id, cells, sev, tabKey);
+    setActiveTab(tabKey);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/50">
+      {/* Filter Tabs Bar */}
+      <div className="p-3 border-b border-slate-200 bg-white flex items-center justify-between text-xs select-none">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setFilter("ALL")}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+              filter === "ALL"
+                ? "bg-slate-900 text-white font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            All ({items.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("CRITICAL")}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+              filter === "CRITICAL"
+                ? "bg-rose-600 text-white font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            Critical ({criticalItems.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("WARNING")}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+              filter === "WARNING"
+                ? "bg-amber-600 text-white font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            Warning ({warningItems.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter("RESOLVED")}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
+              filter === "RESOLVED"
+                ? "bg-emerald-700 text-white font-semibold"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            Resolved ({resolvedItems.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Discrepancy Cards List */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {filteredItems.length === 0 ? (
+          <div className="h-48 flex flex-col items-center justify-center text-center p-6 bg-white rounded-xl border border-dashed border-slate-300">
+            <CheckCircle2 className="w-8 h-8 text-emerald-500 mb-2 shrink-0" strokeWidth={1.75} />
+            <h4 className="text-xs font-semibold text-slate-800">
+              No Discrepancies In Queue
+            </h4>
+            <p className="text-[11px] text-slate-500 max-w-xs mt-1">
+              {filter === "RESOLVED"
+                ? "No signed-off resolutions recorded yet."
+                : "All checks in this category have passed verification."}
+            </p>
+          </div>
+        ) : (
+          filteredItems.map((item) => (
+            <DiscrepancyCard
+              key={item.id}
+              item={item}
+              viewMode={viewMode}
+              isActive={activeId === item.id}
+              onSelect={() => handleCardClick(item)}
+              onJumpToDoc={(tabKey) => handleJumpToDoc(item, tabKey)}
+              onResolve={(action, chip, note) => {
+                onResolveItem?.(item.id, action, chip, note);
+              }}
+              onSubmitSupplierRevision={onSubmitSupplierRevision}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
