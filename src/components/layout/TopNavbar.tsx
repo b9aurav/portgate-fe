@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   ArrowRight,
   Link2,
   Check,
@@ -10,9 +13,10 @@ import {
   AlertOctagon,
   ShieldCheck,
   AlertTriangle,
+  ChevronDown,
   X,
 } from "lucide-react";
-import type { AuditResponse } from "@/lib/types";
+import type { AuditResponse, ShipmentListItem } from "@/lib/types";
 
 interface TopNavbarProps {
   data: AuditResponse;
@@ -20,6 +24,8 @@ interface TopNavbarProps {
   lastSynced: string | null;
   onSync: () => void;
   onOpenUploadModal: () => void;
+  shipments?: ShipmentListItem[];
+  currentSessionToken?: string;
 }
 
 export function TopNavbar({
@@ -28,13 +34,17 @@ export function TopNavbar({
   lastSynced,
   onSync,
   onOpenUploadModal,
+  shipments = [],
+  currentSessionToken,
 }: TopNavbarProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [showPopover, setShowPopover] = useState(false);
+  const [showSwitcher, setShowSwitcher] = useState(false);
 
   const m = data.metadata || ({} as any);
   const status = data.summary?.status || "ACTION_REQUIRED";
-  const token = data.session_token;
+  const token = data.session_token || currentSessionToken || "";
   const rev = data.revision_number || 1;
 
   const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
@@ -56,35 +66,160 @@ export function TopNavbar({
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 relative select-none">
-      {/* ── Left Zone: Brand & Shipment Context ── */}
-      <div className="flex items-center gap-4">
-        {/* Brand Logo & Wordmark */}
-        <div className="flex items-center gap-2.5">
+      {/* ── Left Zone: Logo + Breadcrumbs + Shipment Quick Switcher ── */}
+      <div className="flex items-center gap-3">
+        {/* Brand Logo & Wordmark (Navigates to Dashboard) */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 hover:opacity-90 transition-opacity"
+          title="Return to PortGate Queue Dashboard"
+        >
           <img
             src="/portgate-lockup.png"
             alt="PortGate"
-            className="h-7 w-auto object-contain"
+            className="h-7 w-auto object-contain cursor-pointer"
           />
-        </div>
+        </Link>
 
         {/* Divider */}
-        <div className="h-5 w-px bg-slate-200 mx-1" />
+        <div className="h-5 w-px bg-slate-200" />
 
-        {/* Shipment Breadcrumb */}
-        <div className="flex items-center gap-2">
-          <span className="font-mono font-bold text-slate-900 text-sm">
-            #{data.shipment_ref || "SHP-2026-8841"}
-          </span>
+        {/* Breadcrumb Back Link */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors py-1 px-1.5 rounded hover:bg-slate-100"
+          title="Back to All Shipments Queue"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+          <span>All Shipments</span>
+        </Link>
 
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-mono font-medium">
-            <span>{m?.port_of_loading || "INMUN1"}</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={2} />
-            <span>{m?.port_of_discharge || "USLAX"}</span>
-          </div>
+        {/* Divider */}
+        <div className="h-5 w-px bg-slate-200" />
 
-          <span className="text-[11px] font-mono font-semibold text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-            Rev v{rev}
-          </span>
+        {/* Lightweight Quick-Jump Shipment Switcher Dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setShowSwitcher((p) => !p)}
+            className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer text-xs"
+            title="Click to quickly jump to another active container"
+          >
+            <span className="font-mono font-bold text-slate-900">
+              #{data.shipment_ref || "SHP-2026-8841"}
+            </span>
+            <span className="text-slate-300">·</span>
+            <span className="text-slate-600 font-medium">
+              {m?.po_number || "PO-45012"}
+            </span>
+            <span className="text-[10px] font-mono font-semibold text-slate-600 bg-white border border-slate-200 px-1.5 py-0.2 rounded">
+              Rev v{rev}
+            </span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-slate-400 transition-transform ${showSwitcher ? "rotate-180" : ""}`}
+              strokeWidth={2}
+            />
+          </button>
+
+          {/* Quick-Jump Popover */}
+          {showSwitcher && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setShowSwitcher(false)} />
+              <div className="absolute left-0 top-11 z-40 w-84 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 font-sans">
+                <div className="px-3.5 py-2.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    Switch Active Shipment ({shipments.length || 1})
+                  </span>
+                  <Link
+                    href="/"
+                    onClick={() => setShowSwitcher(false)}
+                    className="text-[11px] text-indigo-600 hover:text-indigo-700 font-medium"
+                  >
+                    All Shipments →
+                  </Link>
+                </div>
+
+                <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+                  {(shipments.length > 0
+                    ? shipments
+                    : [
+                        {
+                          session_token: token || "shreeji-po-9921",
+                          shipment_id: data.shipment_ref || "SHP-2026-8841",
+                          po_number: m?.po_number || "PO-PCR-45012",
+                          exporter_name: m?.exporter_name || "Shreeji Textiles & Apparel",
+                          status: status,
+                          unresolved_count: data.summary?.unresolved_count ?? 3,
+                          revision_number: rev,
+                        } as any,
+                      ]
+                  ).map((s) => {
+                    const isCurrent = s.session_token === token;
+                    const isAction = s.status === "ACTION_REQUIRED";
+                    const isAwaiting = s.status === "AWAITING_SUPPLIER_REVISION";
+
+                    return (
+                      <button
+                        key={s.session_token}
+                        type="button"
+                        onClick={() => {
+                          setShowSwitcher(false);
+                          if (s.session_token !== token) {
+                            router.push(`/shipments/${s.session_token}`);
+                          }
+                        }}
+                        className={`w-full text-left px-3.5 py-2.5 hover:bg-slate-50 transition-colors flex items-center justify-between gap-2.5 cursor-pointer ${
+                          isCurrent ? "bg-indigo-50/50" : ""
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                isAction ? "bg-rose-500" : isAwaiting ? "bg-amber-500" : "bg-emerald-500"
+                              }`}
+                            />
+                            <span className="font-mono text-xs font-bold text-slate-900 truncate">
+                              #{s.shipment_id}
+                            </span>
+                            <span className="text-[10px] text-slate-400">·</span>
+                            <span className="text-xs text-slate-600 truncate">{s.po_number}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                            {s.exporter_name}
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span
+                            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${
+                              isAction
+                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : isAwaiting
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            }`}
+                          >
+                            {s.unresolved_count > 0 ? `${s.unresolved_count} issues` : "Clear"}
+                          </span>
+                          <div className="text-[10px] font-mono text-slate-400 mt-0.5">
+                            v{s.revision_number}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Route Corridor Pill */}
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-mono font-medium">
+          <span>{m?.port_of_loading || "INMUN1"}</span>
+          <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" strokeWidth={2} />
+          <span>{m?.port_of_discharge || "USLAX"}</span>
         </div>
 
         {/* Semantic Status Badge */}
@@ -108,7 +243,7 @@ export function TopNavbar({
         </div>
       </div>
 
-      {/* ── Right Zone: 3 Clean Controls ONLY ── */}
+      {/* ── Right Zone: Sync + Copy Supplier Link + New Audit CTA ── */}
       <div className="flex items-center gap-3">
         {/* 1. Sync Status Button */}
         {token && (
@@ -117,7 +252,7 @@ export function TopNavbar({
             onClick={onSync}
             disabled={isSyncing}
             title="Click to sync session status from supplier"
-            className="text-xs text-slate-600 hover:text-slate-900 font-medium px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors inline-flex items-center gap-1.5 border border-transparent hover:border-slate-200"
+            className="text-xs text-slate-600 hover:text-slate-900 font-medium px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors inline-flex items-center gap-1.5 border border-transparent hover:border-slate-200 cursor-pointer"
           >
             <RefreshCw
               className={`w-3.5 h-3.5 text-slate-500 shrink-0 ${isSyncing ? "animate-spin text-indigo-600" : ""}`}
@@ -135,7 +270,7 @@ export function TopNavbar({
             type="button"
             disabled={!token}
             onClick={() => setShowPopover((prev) => !prev)}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-3.5 py-2 rounded-lg shadow-sm inline-flex items-center gap-2 transition-all cursor-pointer"
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-3.5 py-2 rounded-lg shadow-xs inline-flex items-center gap-2 transition-all cursor-pointer"
           >
             <Link2 className="w-4 h-4 shrink-0" strokeWidth={2} />
             <span>Copy Supplier Revision Link</span>
@@ -174,63 +309,64 @@ export function TopNavbar({
                     <div className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">
                       Session Token
                     </div>
-                    <div className="font-mono text-xs font-bold text-slate-800 truncate">
+                    <div className="font-mono font-bold text-slate-800 text-[11px] truncate">
                       {token}
                     </div>
                   </div>
                   <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
                     <div className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">
-                      Active Revision
+                      Current Revision
                     </div>
-                    <div className="font-mono text-xs font-bold text-slate-800">
-                      v{rev}
+                    <div className="font-mono font-bold text-indigo-600 text-[11px]">
+                      Rev v{rev} (Active)
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
-                  <div className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-1">
-                    Direct Supplier URL
-                  </div>
-                  <div className="font-mono text-[11px] text-slate-700 break-all select-all">
-                    {revisionUrl}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-slate-700">
+                    Public Supplier Portal URL
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={revisionUrl || ""}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-700 select-all focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCopy}
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2} />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Link2 className="w-3.5 h-3.5" strokeWidth={2} />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className={`w-full py-2.5 rounded-lg font-medium text-xs transition-all inline-flex items-center justify-center gap-2 shadow-sm ${
-                    copied
-                      ? "bg-emerald-600 text-white"
-                      : "bg-indigo-600 hover:bg-indigo-700 text-white"
-                  }`}
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-100 shrink-0" strokeWidth={2} />
-                      <span>Copied to Clipboard</span>
-                    </>
-                  ) : (
-                    <>
-                      <Link2 className="w-4 h-4 shrink-0" strokeWidth={2} />
-                      <span>Copy Revision Link</span>
-                    </>
-                  )}
-                </button>
               </div>
             </>
           )}
         </div>
 
-        {/* 3. Secondary Upload Action: New Shipment Audit */}
+        {/* 3. New Shipment Audit Button */}
         <button
           type="button"
           onClick={onOpenUploadModal}
-          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-medium text-xs px-3.5 py-2 rounded-lg inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+          className="border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs px-3 py-2 rounded-lg shadow-2xs inline-flex items-center gap-1.5 transition-all cursor-pointer"
+          title="Upload 3-PDF packet for compliance linting"
         >
           <UploadCloud className="w-4 h-4 text-slate-500 shrink-0" strokeWidth={1.75} />
-          <span>New Shipment Audit</span>
+          <span>New Audit</span>
         </button>
       </div>
     </header>

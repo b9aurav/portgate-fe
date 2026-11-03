@@ -247,3 +247,21 @@ export interface PatchResolutionPayload {
   actor_role: WorkspaceRole;
 }
 
+export interface ShipmentListItem {
+  session_token: string;
+  shipment_id: string;
+  corridor: string;
+  po_number: string;
+  invoice_number: string;
+  exporter_name: string;
+  buyer_name: string;
+  total_invoice_usd: number;
+  revision_number: number;
+  status: "ACTION_REQUIRED" | "BUYER_REVIEW" | "AWAITING_SUPPLIER_REVISION" | "CLEARED_WITH_EXCEPTIONS" | "VERIFIED_CLEAN" | string;
+  unresolved_count: number;
+  deterministic_conflict_count: number;
+  commercial_variance_count: number;
+  compliance_advisory_count: number;
+  updated_at: string;
+}
+

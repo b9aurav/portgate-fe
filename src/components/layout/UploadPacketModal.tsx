@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   UploadCloud,
   FileText,
@@ -18,22 +18,32 @@ interface UploadPacketModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (audit: AuditResponse) => void;
-  tolerancePct: number;
+  tolerancePct?: number;
 }
 
 export function UploadPacketModal({
   isOpen,
   onClose,
   onSuccess,
-  tolerancePct: defaultTolerance,
+  tolerancePct: defaultTolerance = 5.0,
 }: UploadPacketModalProps) {
   const [poPdf, setPoPdf] = useState<File | null>(null);
   const [invPdf, setInvPdf] = useState<File | null>(null);
   const [plPdf, setPlPdf] = useState<File | null>(null);
-  const [tolerancePct, setTolerancePct] = useState(defaultTolerance);
+  const [tolerancePct, setTolerancePct] = useState<number>(() => {
+    return typeof defaultTolerance === "number" && !isNaN(defaultTolerance)
+      ? defaultTolerance
+      : 5.0;
+  });
   const [useMock, setUseMock] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof defaultTolerance === "number" && !isNaN(defaultTolerance)) {
+      setTolerancePct(defaultTolerance);
+    }
+  }, [defaultTolerance]);
 
   if (!isOpen) return null;
 
@@ -220,8 +230,11 @@ export function UploadPacketModal({
                 min="0"
                 max="25"
                 step="0.5"
-                value={tolerancePct}
-                onChange={(e) => setTolerancePct(parseFloat(e.target.value) || 5.0)}
+                value={Number.isFinite(tolerancePct) ? tolerancePct : 5.0}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setTolerancePct(Number.isFinite(val) ? val : 0);
+                }}
                 className="w-16 px-2.5 py-1 text-xs font-mono font-semibold text-right bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <span className="text-xs font-mono text-slate-500">%</span>

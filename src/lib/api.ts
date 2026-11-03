@@ -7,6 +7,7 @@ import type {
   AuditResponse,
   HealthResponse,
   PatchResolutionPayload,
+  ShipmentListItem,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -45,6 +46,26 @@ export async function getHealth(): Promise<HealthResponse> {
     cache: "no-store",
   });
   return handleResponse<HealthResponse>(res);
+}
+
+/**
+ * Fetch all active shipments for the multi-shipment dashboard queue.
+ */
+export async function getShipments(): Promise<ShipmentListItem[]> {
+  const res = await fetch(`${API_BASE}/api/shipments`, {
+    cache: "no-store",
+  });
+  return handleResponse<ShipmentListItem[]>(res);
+}
+
+/**
+ * Delete a shipment audit session by session_token.
+ */
+export async function deleteShipment(token: string): Promise<{ status: string; deleted_token: string }> {
+  const res = await fetch(`${API_BASE}/api/shipments/${token}`, {
+    method: "DELETE",
+  });
+  return handleResponse<{ status: string; deleted_token: string }>(res);
 }
 
 /**
