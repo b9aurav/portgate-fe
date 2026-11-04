@@ -151,3 +151,10 @@ export async function patchDiscrepancy(
   );
   return handleResponse<AuditResponse>(res);
 }
+
+// Backward-compatible named aliases
+export const fetchShipments = getShipments;
+export const auditPacket = runAudit;
+export const fetchSessionByToken = getSession;
+export const reAuditSupplierPacket = reAudit;
+
