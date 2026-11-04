@@ -41,6 +41,7 @@ describe("Shipment Queue Dashboard (Command Center)", () => {
 
     // 5. Cleared for Customs: 1
     expect(screen.getByText("Cleared for Customs")).toBeInTheDocument();
+    expect(screen.getByText("Docs Reconciled · Ready for Broker Handoff")).toBeInTheDocument();
 
     // Verify all 3 rows are initially present
     expect(screen.getByText("#SHP-2026-8841")).toBeInTheDocument();

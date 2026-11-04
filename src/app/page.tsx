@@ -430,7 +430,7 @@ export default function ShipmentQueueDashboard() {
               <span className="text-xs text-emerald-600/80 font-medium">0 blockers remaining</span>
             </div>
             <div className="mt-1 text-xs text-slate-500">
-              Ready for broker worksheet & ISF export
+              Docs Reconciled · Ready for Broker Handoff
             </div>
           </div>
         </section>

@@ -233,6 +233,10 @@ export interface AuditResponse {
   updated_at?: string;
   auto_resolved_in_latest_rev?: string[];
   decision_trail?: AuditDecisionLogEntry[];
+  link_expires_at?: string;
+  link_revoked?: boolean;
+  extraction_confidence_pct?: number;
+  low_confidence_fields?: string[];
 }
 
 export interface HealthResponse {

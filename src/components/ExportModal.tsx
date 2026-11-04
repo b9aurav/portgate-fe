@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   History,
+  ShieldAlert,
   X,
 } from "lucide-react";
 import type { AuditDecisionLogEntry, AuditResponse } from "@/lib/types";
@@ -57,7 +58,7 @@ export function ExportModal({
               <div className="h-5 w-px bg-slate-200" />
               <div>
                 <h2 className="text-base font-semibold text-slate-900">
-                  Verified Customs Clearance Package
+                  Pre-Entry Broker Handoff & ISF Worksheet
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5 font-mono">
                   #{data?.shipment_ref || "—"} · {data?.metadata?.port_of_loading || "INMUN1"} → {data?.metadata?.port_of_discharge || "USLAX"}
@@ -125,6 +126,15 @@ export function ExportModal({
           {view === "decision_log" && (
             <DecisionLogView data={data} decisions={decisionTrail} />
           )}
+        </div>
+
+        {/* Compliance Advisory Notice */}
+        <div className="mx-6 mb-6 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 text-xs flex items-start gap-2.5">
+          <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            <span className="font-semibold text-amber-950">Compliance Advisory: </span>
+            Suggested pre-entry worksheet, 10-digit PO HTS mapping, and CBP MID code generated from reconciled supplier documentation. Final tariff classification, customs valuation (19 USC 1401a), and formal CBP entry filing remain subject to review and confirmation by a licensed US Customs Broker.
+          </p>
         </div>
 
         {/* Footer */}

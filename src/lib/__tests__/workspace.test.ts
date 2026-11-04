@@ -189,5 +189,46 @@ describe("Workspace Sandbox ID & API Header Attachment", () => {
       })
     );
   });
+
+  it("does not attach expired Bearer token when refresh fails, falling back cleanly to X-Workspace-Id", async () => {
+    const wsId = getWorkspaceId();
+    const expiredToken = "expired_jwt_from_past";
+
+    vi.spyOn(supabase.auth, "getSession").mockResolvedValue({
+      data: {
+        session: {
+          access_token: expiredToken,
+          expires_at: Math.floor(Date.now() / 1000) - 3600, // 1 hour ago
+        } as any,
+      },
+      error: null,
+    });
+    vi.spyOn(supabase.auth, "refreshSession").mockResolvedValue({
+      data: { session: null, user: null },
+      error: new Error("Invalid Refresh Token") as any,
+    });
+    vi.spyOn(supabase.auth, "signOut").mockResolvedValue({ error: null });
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ([]),
+      text: async () => "",
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    await getShipments();
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/shipments"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "X-Workspace-Id": wsId,
+        }),
+      })
+    );
+
+    const calledHeaders = mockFetch.mock.calls[0][1].headers;
+    expect(calledHeaders["Authorization"]).toBeUndefined();
+  });
 });
 

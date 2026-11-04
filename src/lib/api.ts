@@ -51,8 +51,25 @@ export async function getAuthHeaders(extra: Record<string, string> = {}): Promis
   };
   try {
     const { data } = await supabase.auth.getSession();
-    if (data?.session?.access_token) {
-      headers["Authorization"] = `Bearer ${data.session.access_token}`;
+    const session = data?.session;
+    if (session?.access_token) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      // Check if access_token is expired or expiring within 30 seconds
+      if (session.expires_at && session.expires_at <= nowSec + 30) {
+        try {
+          const { data: refreshData, error } = await supabase.auth.refreshSession();
+          if (!error && refreshData?.session?.access_token) {
+            headers["Authorization"] = `Bearer ${refreshData.session.access_token}`;
+          } else {
+            // Stale expired session that could not be refreshed; clear it
+            await supabase.auth.signOut().catch(() => {});
+          }
+        } catch {
+          // Proceed with X-Workspace-Id
+        }
+      } else {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
     }
   } catch {
     // If Supabase is unreachable or in mock mode, proceed with X-Workspace-Id
@@ -176,6 +193,24 @@ export async function patchDiscrepancy(
       method: "PATCH",
       headers,
       body: JSON.stringify(payload),
+    }
+  );
+  return handleResponse<AuditResponse>(res);
+}
+
+/**
+ * Rotate or revoke supplier magic link capability token for a shipment.
+ */
+export async function rotateMagicLink(
+  token: string,
+  revoke: boolean = false
+): Promise<AuditResponse> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(
+    `${API_BASE}/api/shipments/${token}/rotate-link?revoke=${revoke}`,
+    {
+      method: "POST",
+      headers,
     }
   );
   return handleResponse<AuditResponse>(res);

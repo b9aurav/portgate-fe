@@ -163,4 +163,26 @@ describe("Supplier Magic Link Revision Portal (/upload/[token])", () => {
       screen.getByRole("link", { name: /return to shipments queue/i })
     ).toHaveAttribute("href", "/");
   });
+
+  it("Revoked Link: renders lockout screen when buyer has revoked the magic link", async () => {
+    const token = "shp_revoked_token";
+    vi.mocked(api.getSession).mockResolvedValue({
+      ...mockActiveAuditV1,
+      session_token: token,
+      link_revoked: true,
+    });
+
+    render(<SupplierPortalPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Link Revoked by Buyer")).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText(/this supplier revision link has been revoked or expired/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /return to shipments queue/i })
+    ).toHaveAttribute("href", "/");
+  });
 });

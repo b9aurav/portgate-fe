@@ -76,6 +76,10 @@ describe("Buyer Exception Workbench (/shipments/[token])", () => {
     expect(within(invTabActive).getByText("3")).toBeInTheDocument();
     expect(within(plTabActive).getByText("1")).toBeInTheDocument();
 
+    // Check extraction confidence pill
+    expect(screen.getByTestId("extraction-confidence-pill")).toBeInTheDocument();
+    expect(screen.getByText(/99.4% Extraction Confidence/i)).toBeInTheDocument();
+
     // Unmount and render Cleared State
     unmount();
     vi.mocked(api.getSession).mockResolvedValue(mockClearedAuditV2);
@@ -210,8 +214,9 @@ describe("Buyer Exception Workbench (/shipments/[token])", () => {
     const openExportBtn = screen.getByRole("button", { name: /export broker worksheet & isf schedule/i });
     await user.click(openExportBtn);
 
-    // Modal title
-    expect(screen.getByText("Verified Customs Clearance Package")).toBeInTheDocument();
+    // Modal title & Compliance Notice
+    expect(screen.getByText("Pre-Entry Broker Handoff & ISF Worksheet")).toBeInTheDocument();
+    expect(screen.getByText(/Compliance Advisory:/i)).toBeInTheDocument();
 
     // 1. Initial tab: Broker Handoff Schedule CSV
     expect(screen.getByRole("button", { name: /broker handoff schedule csv/i })).toBeInTheDocument();
@@ -220,7 +225,7 @@ describe("Buyer Exception Workbench (/shipments/[token])", () => {
     // 2. Switch to ISF Pre-Check Worksheet (10+2)
     const isfTab = screen.getByRole("button", { name: /isf pre-check worksheet/i });
     await user.click(isfTab);
-    expect(screen.getByText(/importer of record/i)).toBeInTheDocument();
+    expect(screen.getByText(/7\. Importer of Record No\./i)).toBeInTheDocument();
     expect(screen.getByText(/buyer \/ consignee/i)).toBeInTheDocument();
 
     // 3. Switch to Document Integrity & Decision Log

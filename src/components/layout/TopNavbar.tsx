@@ -18,9 +18,11 @@ import {
   UserCheck,
   LogIn,
   LogOut,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { generateDiscrepancyBrief } from "@/lib/briefGenerator";
+import { rotateMagicLink } from "@/lib/api";
 import type { AuditResponse, ShipmentListItem } from "@/lib/types";
 
 interface TopNavbarProps {
@@ -48,10 +50,31 @@ export function TopNavbar({
   const [copiedBrief, setCopiedBrief] = useState(false);
   const [showPopover, setShowPopover] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
 
   const m = data.metadata || ({} as any);
   const token = data.session_token || currentSessionToken || "";
   const rev = data.revision_number || 1;
+  const isRevoked = Boolean(data.link_revoked);
+
+  const handleRotate = async (revoke: boolean = false) => {
+    if (!token || isRotating) return;
+    setIsRotating(true);
+    try {
+      const updated = await rotateMagicLink(token, revoke);
+      if (revoke) {
+        onSync();
+      } else if (updated.session_token && updated.session_token !== token) {
+        router.push(`/shipments/${updated.session_token}`);
+      } else {
+        onSync();
+      }
+    } catch (err: any) {
+      alert(err.message || "Failed to update supplier magic link");
+    } finally {
+      setIsRotating(false);
+    }
+  };
 
   const unresolvedCount =
     data.summary?.unresolved_count ??
@@ -350,6 +373,24 @@ export function TopNavbar({
                         Rev v{rev} (Active)
                       </div>
                     </div>
+                  </div>
+
+                  {/* Security Status & Regeneration Bar */}
+                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${isRevoked ? "bg-rose-500" : "bg-emerald-500"}`} />
+                      <span className="text-xs font-medium text-slate-700">
+                        {isRevoked ? "Link Revoked by Buyer" : "Link Active · Expires in 7 days"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isRotating}
+                      onClick={() => handleRotate(false)}
+                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer disabled:opacity-50"
+                    >
+                      {isRotating ? "Updating..." : "Revoke & Regenerate Magic Link"}
+                    </button>
                   </div>
 
                   {/* 1. Raw Magic Link */}

@@ -59,6 +59,10 @@ export const mockActiveAuditV1: AuditResponse = {
   revision_number: 1,
   shipment_ref: "SHP-2026-8841",
   mid_code: "INSHRTEX2301SUR",
+  link_expires_at: "2026-11-11T12:00:00Z",
+  link_revoked: false,
+  extraction_confidence_pct: 99.4,
+  low_confidence_fields: [],
   summary: {
     status: "ACTION_REQUIRED",
     total_findings: 3,
@@ -161,6 +165,10 @@ export const mockClearedAuditV2: AuditResponse = {
   revision_number: 2,
   shipment_ref: "SHP-2026-8841",
   mid_code: "INSHRTEX2301SUR",
+  link_expires_at: "2026-11-11T12:00:00Z",
+  link_revoked: false,
+  extraction_confidence_pct: 99.8,
+  low_confidence_fields: [],
   summary: {
     status: "CLEARED_WITH_EXCEPTIONS",
     total_findings: 5,

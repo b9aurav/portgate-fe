@@ -134,6 +134,14 @@ export function SupplierRevisionDropzone({
         </div>
       </div>
 
+      {/* Security Capability Bar */}
+      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-600 text-[10px] font-medium">
+        <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+        <span className="truncate">
+          Encrypted Capability Link · Expires in 7d · Upload SHA-256 & Timestamp Logged
+        </span>
+      </div>
+
       {/* Styled 2-File Dropzones (sr-only native inputs) */}
       <div className="grid grid-cols-2 gap-2.5">
         {/* Commercial Invoice Dropzone */}

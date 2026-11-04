@@ -75,6 +75,37 @@ function SupplierPortalContent() {
     );
   }
 
+  const isRevoked = Boolean(data.link_revoked);
+  const isExpired = Boolean(
+    data.link_expires_at &&
+    new Date(data.link_expires_at).getTime() < Date.now()
+  );
+
+  if (!loading && (isRevoked || isExpired)) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center select-none font-sans">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-rose-200 shadow-sm p-8 flex flex-col items-center">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mb-4">
+            <Lock className="w-6 h-6" strokeWidth={1.75} />
+          </div>
+          <h2 className="text-base font-bold text-slate-900 mb-1.5">
+            Link Revoked by Buyer
+          </h2>
+          <p className="text-xs text-slate-500 leading-relaxed mb-6">
+            This supplier revision link has been revoked or expired. Please contact the buyer to request a new link.
+          </p>
+          <a
+            href="/"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm transition-all cursor-pointer"
+          >
+            <span>Return to Shipments Queue</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   const handleAuditComplete = (updatedAudit: AuditResponse) => {
     setData(updatedAudit);
   };
