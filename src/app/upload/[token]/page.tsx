@@ -39,9 +39,8 @@ function SupplierPortalContent() {
       setError(null);
       const sessionData = await getSession(token);
       setData(sessionData);
-    } catch (err: any) {
-      console.warn("Could not fetch session from backend, using default reference:", err);
-      setError("Active session not found or expired. Showing reference packet.");
+    } catch {
+      setError("Audit session not found or expired.");
     } finally {
       setLoading(false);
     }
@@ -50,6 +49,31 @@ function SupplierPortalContent() {
   useEffect(() => {
     fetchSession();
   }, [fetchSession]);
+
+  if (!loading && error && (!data || !data.session_token || data.session_token !== token)) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center select-none font-sans">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col items-center">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-4">
+            <AlertOctagon className="w-6 h-6" strokeWidth={1.75} />
+          </div>
+          <h2 className="text-base font-bold text-slate-900 mb-1.5">
+            Audit Session Not Found or Expired
+          </h2>
+          <p className="text-xs text-slate-500 leading-relaxed mb-6">
+            This shipment packet link (<span className="font-mono text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">{token}</span>) is no longer active. It may have been cleared, deleted, or reset.
+          </p>
+          <a
+            href="/"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm transition-all cursor-pointer"
+          >
+            <span>Return to Shipments Queue</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   const handleAuditComplete = (updatedAudit: AuditResponse) => {
     setData(updatedAudit);

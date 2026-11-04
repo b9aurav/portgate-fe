@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,9 +17,10 @@ import {
   RefreshCw,
   Filter,
   Trash2,
+  RotateCcw,
 } from "lucide-react";
 import { UploadPacketModal } from "@/components/layout/UploadPacketModal";
-import { deleteShipment, getSession, getShipments } from "@/lib/api";
+import { deleteShipment, getSession, getShipments, resetWorkspace } from "@/lib/api";
 import type { AuditResponse, ShipmentListItem } from "@/lib/types";
 
 type StatusFilter = "ALL" | "ACTION_REQUIRED" | "AWAITING_SUPPLIER" | "CLEARED";
@@ -35,9 +36,14 @@ export default function ShipmentQueueDashboard() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const isFetchingRef = useRef(false);
 
   // ── Fetch Shipments ───────────────────────────────────────────────────────
   const fetchShipments = useCallback(async (isBackground = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
       if (!isBackground) setIsRefreshing(true);
       const list = await getShipments();
@@ -72,6 +78,7 @@ export default function ShipmentQueueDashboard() {
     } finally {
       setLoading(false);
       setIsRefreshing(false);
+      isFetchingRef.current = false;
     }
   }, []);
 
@@ -185,6 +192,20 @@ export default function ShipmentQueueDashboard() {
     }
   };
 
+  // ── Reset Sandbox Workspace ─────────────────────────────────────────────
+  const handleResetSandbox = async () => {
+    if (isResetting) return;
+    try {
+      setIsResetting(true);
+      await resetWorkspace();
+      await fetchShipments();
+    } catch (err) {
+      console.error("Failed to reset sandbox workspace:", err);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   // ── Upload Modal Success Handler ──────────────────────────────────────────
   const handleUploadSuccess = (newAudit: AuditResponse) => {
     setUploadModalOpen(false);
@@ -213,7 +234,23 @@ export default function ShipmentQueueDashboard() {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="hidden md:inline">Private Sandbox</span>
+          </span>
+
+          <button
+            type="button"
+            onClick={handleResetSandbox}
+            disabled={isResetting}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer select-none"
+            title="Reset sandbox to initial clean demo state"
+          >
+            <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? "animate-spin text-indigo-600" : ""}`} />
+            <span className="hidden sm:inline">Reset Sandbox</span>
+          </button>
+
           <button
             type="button"
             onClick={() => fetchShipments()}
@@ -633,7 +670,7 @@ export default function ShipmentQueueDashboard() {
                               className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors cursor-pointer"
                               title="Delete test shipment run"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
 
                             {/* Open Workbench CTA */}
