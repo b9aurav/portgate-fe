@@ -41,8 +41,8 @@ export function DiscrepancyQueue({
   const isResolved = (it: DiscrepancyItem) =>
     Boolean(
       it.resolution_state &&
-        it.resolution_state !== "UNRESOLVED" &&
-        it.resolution_state !== "REVISION_REQUESTED"
+      it.resolution_state !== "UNRESOLVED" &&
+      it.resolution_state !== "REVISION_REQUESTED"
     );
 
   const unresolvedItems = items.filter(isUnresolved);
@@ -84,44 +84,40 @@ export function DiscrepancyQueue({
           <button
             type="button"
             onClick={() => setFilter("ALL")}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-              filter === "ALL"
-                ? "bg-slate-900 text-white font-semibold"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            }`}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${filter === "ALL"
+              ? "bg-slate-900 text-white font-semibold"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
           >
             All ({unresolvedItems.length})
           </button>
           <button
             type="button"
             onClick={() => setFilter("CRITICAL")}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-              filter === "CRITICAL"
-                ? "bg-rose-600 text-white font-semibold"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            }`}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${filter === "CRITICAL"
+              ? "bg-rose-600 text-white font-semibold"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
           >
             Critical ({criticalItems.length})
           </button>
           <button
             type="button"
             onClick={() => setFilter("WARNING")}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-              filter === "WARNING"
-                ? "bg-amber-600 text-white font-semibold"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            }`}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${filter === "WARNING"
+              ? "bg-amber-600 text-white font-semibold"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
           >
             Warning ({warningItems.length})
           </button>
           <button
             type="button"
             onClick={() => setFilter("RESOLVED")}
-            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${
-              filter === "RESOLVED"
-                ? "bg-emerald-700 text-white font-semibold"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-            }`}
+            className={`px-2.5 py-1 rounded-lg font-medium transition-colors ${filter === "RESOLVED"
+              ? "bg-emerald-700 text-white font-semibold"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
           >
             Resolved ({resolvedItems.length})
           </button>
@@ -130,20 +126,22 @@ export function DiscrepancyQueue({
 
       {/* Diff Banner: What Changed in Rev vX */}
       {data.revision_number > 1 && (data.auto_resolved_in_latest_rev?.length ?? 0) > 0 && (
-        <div className="mx-3 mt-2.5 -mb-0.5 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between gap-2 shadow-2xs whitespace-nowrap">
+        <div className="z-10 mx-3 mt-2.5 -mb-0.5 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between gap-2 shadow-2xs whitespace-nowrap">
           <div className="flex items-center gap-1.5 whitespace-nowrap min-w-0">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" strokeWidth={2} />
             <span className="text-xs font-semibold text-emerald-900 whitespace-nowrap">
               Rev v{data.revision_number}: {data.auto_resolved_in_latest_rev?.length} conflict{data.auto_resolved_in_latest_rev!.length > 1 ? "s" : ""} cleared by supplier
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => setFilter("RESOLVED")}
-            className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 hover:underline shrink-0 whitespace-nowrap cursor-pointer"
-          >
-            View in Resolved &rarr;
-          </button>
+          {filter !== "RESOLVED" && (
+            <button
+              type="button"
+              onClick={() => setFilter("RESOLVED")}
+              className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 hover:underline shrink-0 whitespace-nowrap cursor-pointer"
+            >
+              View in Resolved &rarr;
+            </button>
+          )}
         </div>
       )}
 
@@ -159,8 +157,8 @@ export function DiscrepancyQueue({
               {filter === "RESOLVED"
                 ? "No signed-off resolutions recorded yet."
                 : resolvedItems.length > 0
-                ? `All ${resolvedItems.length} discrepancies have been resolved or cleared.`
-                : "All checks in this category have passed verification."}
+                  ? `All ${resolvedItems.length} discrepancies have been resolved or cleared.`
+                  : "All checks in this category have passed verification."}
             </p>
             {resolvedItems.length > 0 && filter === "ALL" && (
               <button

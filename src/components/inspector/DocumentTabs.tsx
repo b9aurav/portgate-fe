@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { FileText, Receipt, PackageCheck } from "lucide-react";
+import { FileText, Receipt, PackageCheck, CheckCircle2 } from "lucide-react";
 import type { AuditResponse } from "@/lib/types";
 
 interface DocumentTabsProps {
@@ -13,11 +13,17 @@ interface DocumentTabsProps {
 export function DocumentTabs({ activeTab, setActiveTab, data }: DocumentTabsProps) {
   const items = data.items || [];
 
-  // Compute discrepancy counts per document
+  const isUnresolved = (item: any) =>
+    !item.resolution_state ||
+    item.resolution_state === "UNRESOLVED" ||
+    item.resolution_state === "REVISION_REQUESTED";
+
+  // Compute unresolved discrepancy counts per document
   const countForDoc = (docKey: string, prefix: string) => {
     return items.filter((item) => {
+      if (!isUnresolved(item)) return false;
       const hasLoc = item.locs?.some(([k]) => k === docKey);
-      const hasCell = item.cells?.some((c) => c.startsWith(prefix));
+      const hasCell = item.cells?.some((c: string) => c.startsWith(prefix));
       return hasLoc || hasCell;
     }).length;
   };
@@ -72,7 +78,7 @@ export function DocumentTabs({ activeTab, setActiveTab, data }: DocumentTabsProp
             />
             <span>{tab.label}</span>
 
-            {tab.count > 0 && (
+            {tab.count > 0 ? (
               <span
                 className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold leading-none ${
                   isActive
@@ -82,6 +88,11 @@ export function DocumentTabs({ activeTab, setActiveTab, data }: DocumentTabsProp
               >
                 {tab.count}
               </span>
+            ) : (
+              <CheckCircle2
+                className="w-3.5 h-3.5 text-emerald-500 shrink-0 ml-0.5"
+                strokeWidth={2}
+              />
             )}
           </button>
         );

@@ -48,8 +48,11 @@ export function AuditSummaryCard({
 
   const canExport = unresolvedCritical === 0;
 
-  const isBlocked = status === "ACTION_REQUIRED" || status === "BLOCKED";
-  const isExceptions = status === "CLEARED_WITH_EXCEPTIONS";
+  const isBlocked =
+    status === "ACTION_REQUIRED" ||
+    status === "BLOCKED" ||
+    unresolvedCritical > 0 ||
+    unresolvedWarning > 0;
 
   return (
     <div className="p-4 border-b border-slate-200 bg-white space-y-3.5 select-none">
@@ -58,8 +61,6 @@ export function AuditSummaryCard({
         className={`p-3.5 rounded-xl border transition-all ${
           isBlocked
             ? "bg-rose-50/70 border-rose-200 text-rose-900"
-            : isExceptions
-            ? "bg-amber-50/70 border-amber-200 text-amber-900"
             : "bg-emerald-50/70 border-emerald-200 text-emerald-900"
         }`}
       >
@@ -67,8 +68,6 @@ export function AuditSummaryCard({
           <div className="flex items-center gap-2 font-bold text-xs">
             {isBlocked ? (
               <AlertOctagon className="w-4 h-4 text-rose-600 shrink-0" strokeWidth={2} />
-            ) : isExceptions ? (
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" strokeWidth={2} />
             ) : (
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={2} />
             )}

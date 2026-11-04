@@ -10,6 +10,7 @@ import {
   Sparkles,
   RefreshCw,
   FileCheck2,
+  ShieldCheck,
   X,
 } from "lucide-react";
 import { reAudit } from "@/lib/api";
@@ -20,6 +21,8 @@ interface SupplierRevisionDropzoneProps {
   onAuditComplete: (audit: AuditResponse) => void;
   isLoading: boolean;
   setIsLoading: (v: boolean) => void;
+  unresolvedCount?: number;
+  revisionNumber?: number;
 }
 
 export function SupplierRevisionDropzone({
@@ -27,12 +30,36 @@ export function SupplierRevisionDropzone({
   onAuditComplete,
   isLoading,
   setIsLoading,
+  unresolvedCount = 0,
+  revisionNumber = 1,
 }: SupplierRevisionDropzoneProps) {
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [plFile, setPlFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [invDragging, setInvDragging] = useState(false);
   const [plDragging, setPlDragging] = useState(false);
+
+  // If shipment has 0 unresolved discrepancies, lock the portal and show verified card
+  if (unresolvedCount === 0) {
+    return (
+      <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-5 select-none space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" strokeWidth={2} />
+            <h3 className="text-xs font-bold text-emerald-950">
+              Shipment Packet Verified & Locked
+            </h3>
+          </div>
+          <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100/80 border border-emerald-300 px-2 py-0.5 rounded-full">
+            Rev v{revisionNumber} Final
+          </span>
+        </div>
+        <p className="text-xs text-emerald-800 leading-relaxed">
+          All pre-shipment discrepancies have been resolved and signed off. This document packet is now locked for US Buyer & Customs Broker entry filing. No further document uploads are permitted.
+        </p>
+      </div>
+    );
+  }
 
   const hasFiles = Boolean(invoiceFile || plFile);
 

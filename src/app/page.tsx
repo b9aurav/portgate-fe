@@ -17,11 +17,9 @@ import {
   RefreshCw,
   Filter,
   Trash2,
-  MessageSquareText,
 } from "lucide-react";
 import { UploadPacketModal } from "@/components/layout/UploadPacketModal";
 import { deleteShipment, getSession, getShipments } from "@/lib/api";
-import { generateDiscrepancyBrief } from "@/lib/briefGenerator";
 import type { AuditResponse, ShipmentListItem } from "@/lib/types";
 
 type StatusFilter = "ALL" | "ACTION_REQUIRED" | "AWAITING_SUPPLIER" | "CLEARED";
@@ -37,7 +35,6 @@ export default function ShipmentQueueDashboard() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
-  const [copiedNoticeToken, setCopiedNoticeToken] = useState<string | null>(null);
 
   // ── Fetch Shipments ───────────────────────────────────────────────────────
   const fetchShipments = useCallback(async (isBackground = false) => {
@@ -172,27 +169,6 @@ export default function ShipmentQueueDashboard() {
       setTimeout(() => setCopiedToken(null), 2000);
     } catch (err) {
       console.error("Failed to copy link:", err);
-    }
-  };
-
-  // ── Copy Message / Email Notice Brief ────────────────────────────────────
-  const handleCopyNotice = async (e: React.MouseEvent, row: ShipmentListItem) => {
-    e.stopPropagation();
-    let fullAudit: AuditResponse | null = null;
-    try {
-      fullAudit = await getSession(row.session_token);
-    } catch (err) {
-      console.warn("Could not fetch full audit for notice, using summary:", err);
-    }
-    const origin =
-      typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
-    const brief = generateDiscrepancyBrief(fullAudit, row, origin);
-    try {
-      await navigator.clipboard.writeText(brief);
-      setCopiedNoticeToken(row.session_token);
-      setTimeout(() => setCopiedNoticeToken(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy brief notice:", err);
     }
   };
 
@@ -631,43 +607,24 @@ export default function ShipmentQueueDashboard() {
                         {/* 7. Quick Actions */}
                         <td className="py-3.5 px-4 text-right">
                           <div className="inline-flex items-center gap-1.5 justify-end">
-                            {/* Copy Supplier Magic Link */}
-                            <button
-                              type="button"
-                              onClick={(e) => handleCopyLink(e, row.session_token)}
-                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${isCopied
-                                  ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                                  : "text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200"
-                                }`}
-                              title={isCopied ? "Copied!" : "Copy Supplier Magic Link"}
-                            >
-                              {isCopied ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              ) : (
-                                <Link2 className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-
-                            {/* Copy Message / Email Notice */}
-                            <button
-                              type="button"
-                              onClick={(e) => handleCopyNotice(e, row)}
-                              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${copiedNoticeToken === row.session_token
-                                  ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                                  : "text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200"
-                                }`}
-                              title={
-                                copiedNoticeToken === row.session_token
-                                  ? "Notice Copied!"
-                                  : "Copy Message / Email Notice Brief"
-                              }
-                            >
-                              {copiedNoticeToken === row.session_token ? (
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                              ) : (
-                                <MessageSquareText className="w-3.5 h-3.5" />
-                              )}
-                            </button>
+                            {/* Copy Supplier Magic Link (only when unresolved_count > 0) */}
+                            {row.unresolved_count > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleCopyLink(e, row.session_token)}
+                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${isCopied
+                                    ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                    : "text-slate-400 hover:text-slate-700 bg-slate-50 hover:bg-slate-100 border-slate-200"
+                                  }`}
+                                title={isCopied ? "Copied!" : "Copy Supplier Magic Link"}
+                              >
+                                {isCopied ? (
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                ) : (
+                                  <Link2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            )}
 
                             {/* Delete Test Run */}
                             <button
