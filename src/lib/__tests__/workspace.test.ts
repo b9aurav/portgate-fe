@@ -12,7 +12,9 @@ import {
   reAuditSupplierPacket,
   reAudit,
   patchDiscrepancy,
+  claimWorkspace,
 } from "../api";
+import { supabase } from "../supabase";
 
 describe("Workspace Sandbox ID & API Header Attachment", () => {
   beforeEach(() => {
@@ -139,6 +141,51 @@ describe("Workspace Sandbox ID & API Header Attachment", () => {
       expect.objectContaining({
         method: "POST",
         body: form,
+      })
+    );
+  });
+
+  it("attaches Authorization Bearer token alongside X-Workspace-Id when Supabase session is active and tests claimWorkspace", async () => {
+    const wsId = getWorkspaceId();
+    const token = "jwt_access_token_xyz";
+
+    vi.spyOn(supabase.auth, "getSession").mockResolvedValue({
+      data: {
+        session: { access_token: token } as any,
+      },
+      error: null,
+    });
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: "success", claimed_count: 2, owner_id: "user_test_1" }),
+      text: async () => "",
+    });
+    vi.stubGlobal("fetch", mockFetch);
+
+    // 1. getShipments attaches Bearer token
+    await getShipments();
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      expect.stringContaining("/api/shipments"),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          "X-Workspace-Id": wsId,
+          Authorization: `Bearer ${token}`,
+        }),
+      })
+    );
+
+    // 2. claimWorkspace attaches Bearer token and X-Workspace-Id
+    const claimRes = await claimWorkspace();
+    expect(claimRes.claimed_count).toBe(2);
+    expect(mockFetch).toHaveBeenLastCalledWith(
+      expect.stringContaining("/api/workspace/claim"),
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "X-Workspace-Id": wsId,
+          Authorization: `Bearer ${token}`,
+        }),
       })
     );
   });

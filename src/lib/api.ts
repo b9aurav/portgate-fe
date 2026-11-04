@@ -11,6 +11,7 @@ import type {
   ShipmentListItem,
 } from "./types";
 import { getWorkspaceId } from "./workspace";
+import { supabase } from "./supabase";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -41,6 +42,25 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 /**
+ * Builds request headers attaching X-Workspace-Id and Supabase Authorization Bearer token when logged in.
+ */
+export async function getAuthHeaders(extra: Record<string, string> = {}): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    "X-Workspace-Id": getWorkspaceId(),
+    ...extra,
+  };
+  try {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session?.access_token) {
+      headers["Authorization"] = `Bearer ${data.session.access_token}`;
+    }
+  } catch {
+    // If Supabase is unreachable or in mock mode, proceed with X-Workspace-Id
+  }
+  return headers;
+}
+
+/**
  * Check backend health and configuration
  */
 export async function getHealth(): Promise<HealthResponse> {
@@ -52,54 +72,65 @@ export async function getHealth(): Promise<HealthResponse> {
 
 /**
  * Fetch all active shipments for the multi-shipment dashboard queue
- * scoped to the current browser's sandbox workspace.
+ * scoped to the current user (or browser's sandbox workspace if anonymous).
  */
 export async function getShipments(): Promise<ShipmentListItem[]> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_BASE}/api/shipments`, {
     cache: "no-store",
-    headers: {
-      "X-Workspace-Id": getWorkspaceId(),
-    },
+    headers,
   });
   return handleResponse<ShipmentListItem[]>(res);
 }
 
 /**
- * Delete a shipment audit session by session_token within the current sandbox.
+ * Delete a shipment audit session by session_token within the current workspace.
  */
 export async function deleteShipment(token: string): Promise<{ status: string; deleted_token: string }> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_BASE}/api/shipments/${token}`, {
     method: "DELETE",
-    headers: {
-      "X-Workspace-Id": getWorkspaceId(),
-    },
+    headers,
   });
   return handleResponse<{ status: string; deleted_token: string }>(res);
 }
 
 /**
- * Reset current browser's sandbox workspace to initial clean demo state.
+ * Reset current workspace to initial clean demo state.
  */
 export async function resetWorkspace(): Promise<{ status: string; owner_id: string; message: string }> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_BASE}/api/workspace/reset`, {
     method: "POST",
-    headers: {
-      "X-Workspace-Id": getWorkspaceId(),
-    },
+    headers,
   });
   return handleResponse<{ status: string; owner_id: string; message: string }>(res);
 }
 
 /**
+ * Migrate anonymous sandbox shipments into authenticated user account.
+ */
+export async function claimWorkspace(customToken?: string): Promise<{ status: string; claimed_count: number; owner_id: string }> {
+  const headers = await getAuthHeaders();
+  if (customToken) {
+    headers["Authorization"] = `Bearer ${customToken}`;
+  }
+  const res = await fetch(`${API_BASE}/api/workspace/claim`, {
+    method: "POST",
+    headers,
+  });
+  return handleResponse<{ status: string; claimed_count: number; owner_id: string }>(res);
+}
+
+/**
  * Run initial 3-way pre-shipment compliance audit.
- * Sends po_pdf, inv_pdf, pl_pdf, tolerance_pct, mock scoped to current sandbox.
+ * Sends po_pdf, inv_pdf, pl_pdf, tolerance_pct, mock scoped to current workspace.
  */
 export async function runAudit(formData: FormData): Promise<AuditResponse> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_BASE}/api/audit`, {
     method: "POST",
-    headers: {
-      "X-Workspace-Id": getWorkspaceId(),
-    },
+    headers,
     body: formData,
   });
   return handleResponse<AuditResponse>(res);
@@ -138,14 +169,12 @@ export async function patchDiscrepancy(
   discrepancyId: string,
   payload: PatchResolutionPayload
 ): Promise<AuditResponse> {
+  const headers = await getAuthHeaders({ "Content-Type": "application/json" });
   const res = await fetch(
     `${API_BASE}/api/links/${token}/discrepancies/${discrepancyId}`,
     {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Workspace-Id": getWorkspaceId(),
-      },
+      headers,
       body: JSON.stringify(payload),
     }
   );

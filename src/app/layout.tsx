@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import React from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,7 +41,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body className="h-full">{children}</body>
+      <body className="h-full">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

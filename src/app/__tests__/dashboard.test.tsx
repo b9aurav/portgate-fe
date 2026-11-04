@@ -4,6 +4,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ShipmentQueueDashboard from "../page";
 import * as api from "@/lib/api";
+import * as AuthContextModule from "@/context/AuthContext";
 import { mockShipmentList } from "@/test/fixtures";
 import { mockRouter } from "@/test/setup";
 
@@ -181,5 +182,32 @@ describe("Shipment Queue Dashboard (Command Center)", () => {
 
     expect(api.resetWorkspace).toHaveBeenCalled();
     expect(api.getShipments).toHaveBeenCalledTimes(2); // Initial mount + after reset
+  });
+
+  it("renders Private Sandbox and Sign In button when anonymous, and user email + Sign Out when authenticated", async () => {
+    // 1. Anonymous state (default)
+    const { unmount } = render(<ShipmentQueueDashboard />);
+    await waitFor(() => {
+      expect(screen.getByText("Private Sandbox")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Reset Sandbox")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /sign in \/ save workspace/i })).toHaveAttribute("href", "/login");
+    unmount();
+
+    // 2. Authenticated state
+    vi.spyOn(AuthContextModule, "useAuth").mockReturnValue({
+      user: { email: "importer@pacificcoast.com" } as any,
+      session: { access_token: "mock_jwt" } as any,
+      isLoading: false,
+      signOut: vi.fn(),
+      claimWorkspace: vi.fn(),
+    });
+
+    render(<ShipmentQueueDashboard />);
+    await waitFor(() => {
+      expect(screen.getByText("importer@pacificcoast.com")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
+    expect(screen.queryByText("Private Sandbox")).not.toBeInTheDocument();
   });
 });
