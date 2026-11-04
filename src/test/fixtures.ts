@@ -61,6 +61,7 @@ export const mockActiveAuditV1: AuditResponse = {
   mid_code: "INSHRTEX2301SUR",
   link_expires_at: "2026-11-11T12:00:00Z",
   link_revoked: false,
+  reopened_for_revision: false,
   extraction_confidence_pct: 99.4,
   low_confidence_fields: [],
   summary: {
@@ -167,6 +168,7 @@ export const mockClearedAuditV2: AuditResponse = {
   mid_code: "INSHRTEX2301SUR",
   link_expires_at: "2026-11-11T12:00:00Z",
   link_revoked: false,
+  reopened_for_revision: false,
   extraction_confidence_pct: 99.8,
   low_confidence_fields: [],
   summary: {

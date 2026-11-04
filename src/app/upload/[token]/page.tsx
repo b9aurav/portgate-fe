@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   AlertOctagon,
   AlertTriangle,
+  Clock,
   Lock,
 } from "lucide-react";
 import type { AuditResponse } from "@/lib/types";
@@ -124,8 +125,9 @@ function SupplierPortalContent() {
     ).length ??
     0;
 
-  const isBlocked = status === "ACTION_REQUIRED" || status === "BLOCKED" || unresolvedCount > 0;
-  const isCleared = !isBlocked;
+  const isAwaiting = status === "AWAITING_SUPPLIER_REVISION" || Boolean(data.reopened_for_revision);
+  const isBlocked = (status === "ACTION_REQUIRED" || status === "BLOCKED" || unresolvedCount > 0) && !isAwaiting;
+  const isCleared = !isBlocked && !isAwaiting;
 
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans">
@@ -165,15 +167,19 @@ function SupplierPortalContent() {
             className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 border transition-all ${
               isBlocked
                 ? "bg-rose-50 text-rose-700 border-rose-200"
+                : isAwaiting
+                ? "bg-amber-50 text-amber-700 border-amber-200"
                 : "bg-emerald-50 text-emerald-700 border-emerald-200"
             }`}
           >
             {isBlocked ? (
               <AlertOctagon className="w-3.5 h-3.5 text-rose-600 shrink-0" strokeWidth={2} />
+            ) : isAwaiting ? (
+              <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" strokeWidth={2} />
             ) : (
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" strokeWidth={2} />
             )}
-            <span>{status.replace(/_/g, " ")}</span>
+            <span>{isAwaiting ? "AWAITING SUPPLIER REVISION" : status.replace(/_/g, " ")}</span>
           </div>
         </div>
 
@@ -212,6 +218,7 @@ function SupplierPortalContent() {
               setIsLoading={setIsReauditing}
               unresolvedCount={unresolvedCount}
               revisionNumber={rev}
+              isReopened={Boolean(data.reopened_for_revision)}
             />
           </div>
 

@@ -11,6 +11,7 @@ import {
   RefreshCw,
   FileCheck2,
   ShieldCheck,
+  Clock,
   X,
 } from "lucide-react";
 import { reAudit } from "@/lib/api";
@@ -23,6 +24,7 @@ interface SupplierRevisionDropzoneProps {
   setIsLoading: (v: boolean) => void;
   unresolvedCount?: number;
   revisionNumber?: number;
+  isReopened?: boolean;
 }
 
 export function SupplierRevisionDropzone({
@@ -32,6 +34,7 @@ export function SupplierRevisionDropzone({
   setIsLoading,
   unresolvedCount = 0,
   revisionNumber = 1,
+  isReopened = false,
 }: SupplierRevisionDropzoneProps) {
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [plFile, setPlFile] = useState<File | null>(null);
@@ -39,8 +42,8 @@ export function SupplierRevisionDropzone({
   const [invDragging, setInvDragging] = useState(false);
   const [plDragging, setPlDragging] = useState(false);
 
-  // If shipment has 0 unresolved discrepancies, lock the portal and show verified card
-  if (unresolvedCount === 0) {
+  // If shipment has 0 unresolved discrepancies and is not reopened by buyer, lock the portal and show verified card
+  if (unresolvedCount === 0 && !isReopened) {
     return (
       <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-5 select-none space-y-2.5">
         <div className="flex items-center justify-between">
@@ -141,6 +144,17 @@ export function SupplierRevisionDropzone({
           Encrypted Capability Link · Expires in 7d · Upload SHA-256 & Timestamp Logged
         </span>
       </div>
+
+      {/* Reopened Banner */}
+      {isReopened && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 flex items-start gap-2 select-none">
+          <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-900 leading-snug">
+            <span className="font-bold">Shipment Reopened for Supplier Revision: </span>
+            The buyer has reopened this packet for revised document submission. You may upload replacement Commercial Invoice and/or Packing List PDFs to trigger a revision audit against the locked Buyer PO baseline.
+          </div>
+        </div>
+      )}
 
       {/* Styled 2-File Dropzones (sr-only native inputs) */}
       <div className="grid grid-cols-2 gap-2.5">

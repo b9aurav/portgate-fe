@@ -11,7 +11,7 @@ import { AuditSummaryCard } from "@/components/workbench/AuditSummaryCard";
 import { DiscrepancyQueue } from "@/components/workbench/DiscrepancyQueue";
 import { ExportModal } from "@/components/ExportModal";
 import { DEFAULT_AUDIT_PACKET } from "@/lib/defaultPacket";
-import { getSession, getShipments, patchDiscrepancy } from "@/lib/api";
+import { getSession, getShipment, getShipments, patchDiscrepancy } from "@/lib/api";
 import type {
   AuditDecisionLogEntry,
   AuditResponse,
@@ -65,7 +65,7 @@ function BuyerWorkbenchContent() {
       try {
         setIsSyncing(true);
         const [updated, list] = await Promise.allSettled([
-          getSession(targetToken),
+          getShipment(targetToken),
           getShipments(),
         ]);
 
@@ -83,7 +83,19 @@ function BuyerWorkbenchContent() {
 
           // Rehydrate permanent decision trail from backend or synthesize from resolved items
           if (res.decision_trail && Array.isArray(res.decision_trail) && res.decision_trail.length > 0) {
-            setDecisionTrail(res.decision_trail);
+            const seen = new Set<string>();
+            const deduplicated = res.decision_trail.filter((entry: AuditDecisionLogEntry) => {
+              if (
+                entry.discrepancy_id &&
+                (entry.action === "CLEARED_BY_REVISION" || entry.action === "CLEARED_IN_REVISION")
+              ) {
+                const key = `${entry.discrepancy_id}:${entry.action}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+              }
+              return true;
+            });
+            setDecisionTrail(deduplicated);
           } else {
             const resolvedItems = (res.discrepancies || res.items || []).filter(
               (it: any) =>
@@ -103,6 +115,8 @@ function BuyerWorkbenchContent() {
                     ? "ACCEPT_VARIANCE"
                     : it.resolution_state === "ESCALATED_TO_BROKER"
                     ? "ESCALATE_BROKER"
+                    : it.resolution_state === "CLEARED_BY_REVISION" || it.resolution_state === "CLEARED_IN_REVISION"
+                    ? "CLEARED_BY_REVISION"
                     : "REQUEST_REVISION",
                 reason_chip: it.resolution_reason_chip || "Authorized Sign-Off",
                 note: it.resolution_note,

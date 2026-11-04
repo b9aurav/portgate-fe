@@ -17,7 +17,8 @@ export type ResolutionState =
   | "REVISION_REQUESTED"
   | "ACCEPTED_EXCEPTION"
   | "ESCALATED_TO_BROKER"
-  | "CLEARED_BY_REVISION";
+  | "CLEARED_BY_REVISION"
+  | "CLEARED_IN_REVISION";
 
 export type AuditOverallStatus =
   | "ACTION_REQUIRED"
@@ -63,7 +64,17 @@ export interface AuditDecisionLogEntry {
   title: string;
   previous_state: ResolutionState;
   new_state: ResolutionState;
-  action: "REQUEST_REVISION" | "ACCEPT_VARIANCE" | "ESCALATE_BROKER";
+  action:
+    | "REQUEST_REVISION"
+    | "ACCEPT_VARIANCE"
+    | "ESCALATE_BROKER"
+    | "CLEARED_BY_REVISION"
+    | "CLEARED_IN_REVISION"
+    | "REOPEN_FOR_REVISION"
+    | "REOPEN_SHIPMENT"
+    | "EXTEND_EXPIRY"
+    | "ROTATE_LINK"
+    | string;
   reason_chip: string;
   note?: string;
   actor_role: WorkspaceRole;
@@ -235,6 +246,7 @@ export interface AuditResponse {
   decision_trail?: AuditDecisionLogEntry[];
   link_expires_at?: string;
   link_revoked?: boolean;
+  reopened_for_revision?: boolean;
   extraction_confidence_pct?: number;
   low_confidence_fields?: string[];
 }

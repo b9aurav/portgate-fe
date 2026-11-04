@@ -216,6 +216,52 @@ export async function rotateMagicLink(
   return handleResponse<AuditResponse>(res);
 }
 
+/**
+ * Fetch shipment audit session for Buyer Workbench (authenticated / workspace-scoped).
+ */
+export async function getShipment(token: string): Promise<AuditResponse> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/shipments/${token}`, {
+    headers,
+    cache: "no-store",
+  });
+  if (res.ok) {
+    return handleResponse<AuditResponse>(res);
+  }
+  // Graceful fallback to getSession
+  return getSession(token);
+}
+
+/**
+ * Reopen a cleared or locked shipment packet for supplier revision.
+ */
+export async function reopenShipment(token: string): Promise<AuditResponse> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/shipments/${token}/reopen`, {
+    method: "POST",
+    headers,
+  });
+  return handleResponse<AuditResponse>(res);
+}
+
+/**
+ * Extend supplier magic link expiration by +days (default 7).
+ */
+export async function extendLinkExpiry(
+  token: string,
+  days: number = 7
+): Promise<AuditResponse> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(
+    `${API_BASE}/api/shipments/${token}/extend-expiry?days=${days}`,
+    {
+      method: "POST",
+      headers,
+    }
+  );
+  return handleResponse<AuditResponse>(res);
+}
+
 // Backward-compatible named aliases
 export const fetchShipments = getShipments;
 export const auditPacket = runAudit;

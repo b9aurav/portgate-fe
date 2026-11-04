@@ -35,7 +35,7 @@ export function AuditDecisionTrail({ decisions }: AuditDecisionTrailProps) {
     );
   }
 
-  const actionMeta = {
+  const actionMeta: Record<string, { badge: string; label: string; icon: any }> = {
     REQUEST_REVISION: {
       badge: "bg-purple-100 text-purple-800 border-purple-200",
       label: "Revision Requested",
@@ -50,6 +50,26 @@ export function AuditDecisionTrail({ decisions }: AuditDecisionTrailProps) {
       badge: "bg-sky-100 text-sky-800 border-sky-200",
       label: "Escalated to Broker",
       icon: Scale,
+    },
+    CLEARED_BY_REVISION: {
+      badge: "bg-teal-100 text-teal-800 border-teal-200",
+      label: "Cleared in Revision",
+      icon: CheckCircle2,
+    },
+    CLEARED_IN_REVISION: {
+      badge: "bg-teal-100 text-teal-800 border-teal-200",
+      label: "Cleared in Revision",
+      icon: CheckCircle2,
+    },
+    REOPEN_FOR_REVISION: {
+      badge: "bg-amber-100 text-amber-800 border-amber-200",
+      label: "Reopened for Revision",
+      icon: CornerUpLeft,
+    },
+    REOPEN_SHIPMENT: {
+      badge: "bg-amber-100 text-amber-800 border-amber-200",
+      label: "Reopened for Revision",
+      icon: CornerUpLeft,
     },
   };
 
@@ -77,7 +97,11 @@ export function AuditDecisionTrail({ decisions }: AuditDecisionTrailProps) {
       {isExpanded && (
         <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto p-2 space-y-2">
           {decisions.map((entry) => {
-            const meta = actionMeta[entry.action];
+            const meta = actionMeta[entry.action] || {
+              badge: "bg-slate-100 text-slate-800 border-slate-200",
+              label: entry.action?.replace(/_/g, " ") || "Audit Action",
+              icon: History,
+            };
             const Icon = meta.icon;
             return (
               <div

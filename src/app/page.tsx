@@ -509,20 +509,19 @@ export default function ShipmentQueueDashboard() {
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider select-none">
-                  <th className="py-3 px-4">Shipment & Route</th>
-                  <th className="py-3 px-4">PO & Invoice Ref</th>
-                  <th className="py-3 px-4">Supplier / Exporter</th>
-                  <th className="py-3 px-4 text-center">Revision</th>
-                  <th className="py-3 px-4">Conflict Breakdown</th>
-                  <th className="py-3 px-4">Queue Status</th>
-                  <th className="py-3 px-4 text-right">Quick Actions</th>
+                <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-semibold text-slate-500 uppercase tracking-wider select-none whitespace-nowrap">
+                  <th className="py-3 pl-4 pr-3">Shipment & Order Ref</th>
+                  <th className="py-3 px-3">Supplier / Exporter</th>
+                  <th className="py-3 px-2 text-center w-20">Revision</th>
+                  <th className="py-3 px-3">Conflict Breakdown</th>
+                  <th className="py-3 px-3">Queue Status</th>
+                  <th className="py-3 pl-2 pr-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <td colSpan={6} className="py-12 text-center text-slate-400">
                       <div className="flex items-center justify-center gap-2">
                         <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
                         <span className="font-mono text-xs">Loading shipment queue...</span>
@@ -531,7 +530,7 @@ export default function ShipmentQueueDashboard() {
                   </tr>
                 ) : filteredShipments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500">
+                    <td colSpan={6} className="py-12 text-center text-slate-500">
                       <div className="max-w-sm mx-auto flex flex-col items-center">
                         <Filter className="w-8 h-8 text-slate-300 mb-2" />
                         <div className="font-medium text-slate-700 text-sm">No shipments found</div>
@@ -593,42 +592,39 @@ export default function ShipmentQueueDashboard() {
                         onClick={() => router.push(`/shipments/${row.session_token}`)}
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                       >
-                        {/* 1. Shipment & Route */}
-                        <td className="py-3.5 px-4">
+                        {/* 1. Combined: Shipment & Route + PO & Invoice Ref */}
+                        <td className="py-3 pl-4 pr-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                               #{row.shipment_id || "SHP-2026-8841"}
                             </span>
-                          </div>
-                          <div className="mt-1">
-                            <span className="font-mono text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/80">
+                            <span className="font-mono text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/80 whitespace-nowrap inline-flex items-center">
                               {row.corridor || "INMUN1 → USLAX"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1 text-xs text-slate-500 whitespace-nowrap">
+                            <span className="font-semibold text-slate-800">{row.po_number}</span>
+                            <span className="text-slate-300">·</span>
+                            <span className="font-mono text-[11px] text-slate-500">
+                              {row.invoice_number || "Pending Invoice"}
                             </span>
                           </div>
                         </td>
 
-                        {/* 2. PO & Invoice Ref */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-slate-900">{row.po_number}</div>
-                          <div className="font-mono text-[11px] text-slate-500 mt-0.5">
-                            {row.invoice_number || "Pending Invoice"}
-                          </div>
-                        </td>
-
-                        {/* 3. Supplier / Exporter */}
-                        <td className="py-3.5 px-4 max-w-[200px]">
-                          <div className="font-medium text-slate-900 truncate" title={row.exporter_name}>
+                        {/* 2. Supplier / Exporter */}
+                        <td className="py-3 px-3">
+                          <div className="font-medium text-slate-900 truncate max-w-[170px]" title={row.exporter_name}>
                             {row.exporter_name}
                           </div>
-                          <div className="font-mono font-semibold text-slate-700 text-xs mt-0.5">
+                          <div className="font-mono font-semibold text-slate-700 text-xs mt-0.5 whitespace-nowrap">
                             ${row.total_invoice_usd?.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
                         </td>
 
-                        {/* 4. Revision */}
-                        <td className="py-3.5 px-4 text-center">
+                        {/* 3. Revision */}
+                        <td className="py-3 px-2 text-center whitespace-nowrap w-20">
                           <span
-                            className={`font-mono text-[11px] px-2 py-0.5 rounded border font-semibold ${(row.revision_number || 1) > 1
+                            className={`font-mono text-[10px] px-2 py-0.5 rounded border font-semibold whitespace-nowrap inline-block ${(row.revision_number || 1) > 1
                                 ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                                 : "bg-slate-50 text-slate-600 border-slate-200"
                               }`}
@@ -637,28 +633,28 @@ export default function ShipmentQueueDashboard() {
                           </span>
                         </td>
 
-                        {/* 5. Conflict Breakdown */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex flex-wrap items-center gap-1.5">
+                        {/* 4. Conflict Breakdown */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5 whitespace-nowrap">
                             {row.deterministic_conflict_count > 0 && (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full">
-                                {row.deterministic_conflict_count} Hard Conflict{row.deterministic_conflict_count > 1 ? "s" : ""}
+                              <span className="inline-flex items-center gap-1 text-[10.5px] font-medium bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                                {row.deterministic_conflict_count} Conflict{row.deterministic_conflict_count > 1 ? "s" : ""}
                               </span>
                             )}
                             {row.commercial_variance_count > 0 && (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 text-[10.5px] font-medium bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                                 {row.commercial_variance_count} Variance{row.commercial_variance_count > 1 ? "s" : ""}
                               </span>
                             )}
                             {row.compliance_advisory_count > 0 && (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 text-[10.5px] font-medium bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                                 {row.compliance_advisory_count} Advisor{row.compliance_advisory_count > 1 ? "ies" : "y"}
                               </span>
                             )}
                             {row.deterministic_conflict_count === 0 &&
                               row.commercial_variance_count === 0 &&
                               row.compliance_advisory_count === 0 && (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                   All Checks Passed
                                 </span>
@@ -666,18 +662,18 @@ export default function ShipmentQueueDashboard() {
                           </div>
                         </td>
 
-                        {/* 6. Queue Status */}
-                        <td className="py-3.5 px-4">
+                        {/* 5. Queue Status */}
+                        <td className="py-3 px-3 whitespace-nowrap">
                           <span
-                            className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${statusBadgeClass}`}
+                            className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-normal whitespace-nowrap ${statusBadgeClass}`}
                           >
                             {statusBadgeLabel}
                           </span>
                         </td>
 
-                        {/* 7. Quick Actions */}
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="inline-flex items-center gap-1.5 justify-end">
+                        {/* 6. Quick Actions */}
+                        <td className="py-3 pl-2 pr-4 text-right whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1 justify-end whitespace-nowrap">
                             {/* Copy Supplier Magic Link (only when unresolved_count > 0) */}
                             {row.unresolved_count > 0 && (
                               <button
@@ -704,7 +700,7 @@ export default function ShipmentQueueDashboard() {
                               className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition-colors cursor-pointer"
                               title="Delete test shipment run"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
 
                             {/* Open Workbench CTA */}

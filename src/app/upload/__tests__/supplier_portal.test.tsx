@@ -150,6 +150,41 @@ describe("Supplier Magic Link Revision Portal (/upload/[token])", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("Reopened State: unlocks dropzones for uploading replacement documents even if unresolved_count === 0", async () => {
+    const token = "shp_reopened_token";
+
+    vi.mocked(api.getSession).mockResolvedValue({
+      ...mockClearedAuditV2,
+      session_token: token,
+      reopened_for_revision: true,
+      summary: {
+        ...mockClearedAuditV2.summary,
+        status: "AWAITING_SUPPLIER_REVISION",
+        unresolved_count: 0,
+      },
+    });
+
+    render(<SupplierPortalPage />);
+
+    // Wait for session data to load
+    await waitFor(() => {
+      expect(screen.getByText(/Shipment Reopened for Supplier Revision/i)).toBeInTheDocument();
+    });
+
+    // Dropzones and re-audit button MUST be rendered and active
+    expect(screen.getByText("Upload Corrected Documents")).toBeInTheDocument();
+    expect(screen.getByText("Commercial Invoice PDF")).toBeInTheDocument();
+    expect(screen.getByText("Final Packing List PDF")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /run revision audit against locked buyer po/i,
+      })
+    ).toBeInTheDocument();
+
+    // The verified & locked banner must NOT be rendered
+    expect(screen.queryByText("Shipment Packet Verified & Locked")).not.toBeInTheDocument();
+  });
+
   it("Expired/Invalid Token: renders friendly error screen when session is not found", async () => {
     vi.mocked(api.getSession).mockRejectedValue(new Error("Session not found"));
 

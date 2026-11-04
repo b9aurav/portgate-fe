@@ -112,7 +112,7 @@ export function ExportModal({
               }`}
             >
               <History className="w-3.5 h-3.5 shrink-0" strokeWidth={1.75} />
-              <span>Document Integrity & Decision Log</span>
+              <span>Document Hash & Exception Audit Log</span>
             </button>
           </div>
         </div>
@@ -232,7 +232,7 @@ function ISFPreCheckView({ data }: { data: AuditResponse }) {
         <InfoRow label="7. Importer of Record No." value="On File with CBP (Pacific Coast Retail Group LLC)" />
         <InfoRow label="8. Consignee Number" value={`${m.exporter_gstin || "24AABCS1429B1Z5"} / US IOR EIN`} />
         <InfoRow label="9. Country of Origin" value="India (ISO: IN)" />
-        <InfoRow label="10. Commodity 6-Digit HTSUS" value={Array.from(new Set(hsRoots)).filter(Boolean).join(" · ") || "6109.10"} />
+        <InfoRow label="10. PO-Matched HTSUS (Consistency Checked)" value={Array.from(new Set(hsRoots)).filter(Boolean).join(" · ") || "6109.10"} />
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 font-sans leading-relaxed">
@@ -278,7 +278,7 @@ function DecisionLogView({
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0" strokeWidth={2} />
             <span className="text-sm font-semibold text-emerald-950">
-              Document Integrity & Cryptographic Decision Log
+              Document Hash & Exception Audit Log
             </span>
           </div>
           <span className="font-mono text-[10px] bg-white border border-emerald-300 text-emerald-800 px-2 py-0.5 rounded font-semibold">
@@ -318,42 +318,67 @@ function DecisionLogView({
             No exception decisions signed off yet. Discrepancies resolved via the Evidence-Backed Resolution Bar will be recorded into this permanent ledger.
           </div>
         ) : (
-          <div className="border border-slate-200 rounded-xl overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+          <div className="border border-slate-200 rounded-xl overflow-x-auto">
+            <table className="w-full text-left text-xs whitespace-nowrap min-w-[700px]">
+              <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 whitespace-nowrap">
                 <tr>
-                  <th className="px-3 py-2">Timestamp</th>
-                  <th className="px-3 py-2">Item ID</th>
-                  <th className="px-3 py-2">Action</th>
-                  <th className="px-3 py-2">Reason Chip</th>
-                  <th className="px-3 py-2">Signatory</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Timestamp</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Item ID</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Action</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Reason Chip</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Signatory</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Digest / Hash Chain</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="divide-y divide-slate-100 bg-white whitespace-nowrap">
                 {decisions.map((entry) => (
                   <tr key={entry.id} className="hover:bg-slate-50/60">
-                    <td className="px-3 py-2 font-mono text-[10px] text-slate-500">
+                    <td className="px-3 py-2 font-mono text-[10px] text-slate-500 whitespace-nowrap">
                       {entry.timestamp}
                     </td>
-                    <td className="px-3 py-2 font-mono font-bold text-slate-800">
+                    <td className="px-3 py-2 font-mono font-bold text-slate-800 whitespace-nowrap">
                       {entry.discrepancy_id}
                     </td>
-                    <td className="px-3 py-2 font-semibold">
+                    <td className="px-3 py-2 font-semibold whitespace-nowrap">
                       {entry.action === "ACCEPT_VARIANCE" ? (
                         <span className="text-emerald-700">Accepted Variance</span>
                       ) : entry.action === "REQUEST_REVISION" ? (
                         <span className="text-purple-700">Requested Revision</span>
-                      ) : (
+                      ) : entry.action === "ESCALATE_BROKER" || entry.action === "ESCALATED_TO_BROKER" ? (
                         <span className="text-sky-700">Escalated to Broker</span>
+                      ) : entry.action === "CLEARED_BY_REVISION" || entry.action === "CLEARED_IN_REVISION" ? (
+                        <span className="text-teal-700">Cleared in Revision</span>
+                      ) : entry.action === "REOPEN_FOR_REVISION" || entry.action === "REOPEN_SHIPMENT" ? (
+                        <span className="text-amber-700">Reopened for Revision</span>
+                      ) : entry.action === "EXTEND_EXPIRY" ? (
+                        <span className="text-indigo-700">Extended Link Expiry</span>
+                      ) : entry.action === "ROTATE_LINK" ? (
+                        <span className="text-amber-700">Magic Link Rotated</span>
+                      ) : entry.action?.startsWith("Uploaded Revision") || entry.discrepancy_id === "REVISION_UPLOAD" ? (
+                        <span className="text-indigo-700">Revised Packet Upload</span>
+                      ) : (
+                        <span className="text-slate-700">{entry.action?.replace(/_/g, " ") || "Audit Action"}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-slate-700">
-                      <span className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[11px]">
+                    <td className="px-3 py-2 text-slate-700 whitespace-nowrap">
+                      <span className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-[11px] whitespace-nowrap">
                         {entry.reason_chip}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-slate-600 text-[11px]">
+                    <td className="px-3 py-2 text-slate-600 text-[11px] whitespace-nowrap">
                       {entry.actor_name}
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[10px] text-slate-500 whitespace-nowrap">
+                      {(entry as any).entry_hash ? (
+                        <span
+                          title={`Prev Hash: ${(entry as any).prev_entry_hash || "GENESIS_ROOT"}`}
+                          className="bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded font-mono text-[10px] text-slate-700 whitespace-nowrap"
+                        >
+                          #{(entry as any).entry_hash}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -387,7 +412,7 @@ function generateBrokerHandoffCSV(data: AuditResponse): string {
       "POD",
       "LINE_NO",
       "SKU",
-      "HTS_CODE",
+      "PO-Matched HTSUS (Consistency Checked)",
       "QTY_PCS",
       "UNIT_PRICE_USD",
       "LINE_TOTAL_USD",

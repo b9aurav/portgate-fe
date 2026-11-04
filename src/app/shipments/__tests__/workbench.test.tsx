@@ -11,7 +11,10 @@ describe("Buyer Exception Workbench (/shipments/[token])", () => {
     vi.clearAllMocks();
     vi.spyOn(api, "getShipments").mockResolvedValue([...mockShipmentList]);
     vi.spyOn(api, "getSession").mockResolvedValue(mockActiveAuditV1);
+    vi.spyOn(api, "getShipment").mockImplementation((token: string) => api.getSession(token));
     vi.spyOn(api, "patchDiscrepancy").mockResolvedValue(mockClearedAuditV2);
+    vi.spyOn(api, "reopenShipment").mockResolvedValue(mockActiveAuditV1);
+    vi.spyOn(api, "extendLinkExpiry").mockResolvedValue(mockActiveAuditV1);
   });
 
   it("TopNavbar: renders breadcrumb switcher, Copy Revision Link when active, and View Supplier Portal when cleared", async () => {
@@ -54,7 +57,8 @@ describe("Buyer Exception Workbench (/shipments/[token])", () => {
     // Copy Revision Link split button must be HIDDEN when unresolved_count === 0
     expect(screen.queryByRole("button", { name: /copy revision link/i })).not.toBeInTheDocument();
 
-    // Subtle "View Supplier Portal" link must be SHOWN
+    // "Reopen for Revision" button and subtle "View Supplier Portal" link must be SHOWN
+    expect(screen.getByRole("button", { name: /reopen for revision/i })).toBeInTheDocument();
     const portalLink = screen.getByRole("link", { name: /view supplier portal/i });
     expect(portalLink).toBeInTheDocument();
     expect(portalLink).toHaveAttribute("href", expect.stringContaining("/upload/"));
@@ -228,8 +232,8 @@ describe("Buyer Exception Workbench (/shipments/[token])", () => {
     expect(screen.getByText(/7\. Importer of Record No\./i)).toBeInTheDocument();
     expect(screen.getByText(/buyer \/ consignee/i)).toBeInTheDocument();
 
-    // 3. Switch to Document Integrity & Decision Log
-    const logTab = screen.getByRole("button", { name: /document integrity & decision log/i });
+    // 3. Switch to Document Hash & Exception Audit Log
+    const logTab = screen.getByRole("button", { name: /document hash & exception audit log/i });
     await user.click(logTab);
 
     // Verify SHA-256 proof badge
@@ -239,5 +243,37 @@ describe("Buyer Exception Workbench (/shipments/[token])", () => {
     // Verify signed-off exception ledger
     expect(screen.getByText("Logged Audit Sign-Offs & Exceptions")).toBeInTheDocument();
     expect(screen.getAllByText("Approved PO Amendment #2").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("Reopened State: displays amber review banner, keeps resolved items strictly in Resolved tab, and avoids conflicting green banner", async () => {
+    const reopenedAudit = {
+      ...mockClearedAuditV2,
+      reopened_for_revision: true,
+      auto_resolved_in_latest_rev: ["DISC-CARTONS", "DISC-MATH-3", "DISC-WEIGHT-INV", "DISC-HS-1"],
+      summary: {
+        ...mockClearedAuditV2.summary,
+        status: "AWAITING_SUPPLIER_REVISION" as const,
+        unresolved_count: 0,
+      },
+    };
+
+    vi.mocked(api.getSession).mockResolvedValue(reopenedAudit);
+    render(<BuyerWorkbenchPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/⚠️ Packet Reopened for Supplier Revision — Active Review Mode/i)).toBeInTheDocument();
+    });
+
+    // Green cleared diff banner must NOT be displayed
+    expect(screen.queryByText(/conflicts cleared by supplier/i)).not.toBeInTheDocument();
+
+    // Tab counts: All (0), Critical (0), Warning (0), Resolved (5)
+    expect(screen.getByRole("button", { name: /^All \(0\)$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Critical \(0\)$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Warning \(0\)$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Resolved \(5\)$/i })).toBeInTheDocument();
+
+    // Summary Card displays AWAITING SUPPLIER REVISION
+    expect(screen.getByText("AWAITING SUPPLIER REVISION")).toBeInTheDocument();
   });
 });

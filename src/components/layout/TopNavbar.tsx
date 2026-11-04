@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { generateDiscrepancyBrief } from "@/lib/briefGenerator";
-import { rotateMagicLink } from "@/lib/api";
+import { extendLinkExpiry, reopenShipment, rotateMagicLink } from "@/lib/api";
 import type { AuditResponse, ShipmentListItem } from "@/lib/types";
 
 interface TopNavbarProps {
@@ -51,6 +51,8 @@ export function TopNavbar({
   const [showPopover, setShowPopover] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
+  const [isReopening, setIsReopening] = useState(false);
+  const [isExtending, setIsExtending] = useState(false);
 
   const m = data.metadata || ({} as any);
   const token = data.session_token || currentSessionToken || "";
@@ -73,6 +75,32 @@ export function TopNavbar({
       alert(err.message || "Failed to update supplier magic link");
     } finally {
       setIsRotating(false);
+    }
+  };
+
+  const handleReopen = async () => {
+    if (!token || isReopening) return;
+    setIsReopening(true);
+    try {
+      await reopenShipment(token);
+      onSync();
+    } catch (err: any) {
+      alert(err.message || "Failed to reopen shipment");
+    } finally {
+      setIsReopening(false);
+    }
+  };
+
+  const handleExtendExpiry = async () => {
+    if (!token || isExtending) return;
+    setIsExtending(true);
+    try {
+      await extendLinkExpiry(token, 7);
+      onSync();
+    } catch (err: any) {
+      alert(err.message || "Failed to extend link expiry");
+    } finally {
+      setIsExtending(false);
     }
   };
 
@@ -280,53 +308,65 @@ export function TopNavbar({
           </button>
         )}
 
-        {/* 2. Supplier Action: If Cleared, show subtle View Supplier Portal; else Split Button */}
-        {unresolvedCount === 0 ? (
-          <a
-            href={`/upload/${token}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 border border-slate-200 hover:bg-slate-50 rounded-lg px-3 py-1.5 whitespace-nowrap transition-colors"
-            title="Open Supplier Revision Portal in new tab"
-          >
-            <ExternalLink className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
-            <span>View Supplier Portal</span>
-          </a>
+        {/* 2. Supplier Action: If Cleared (and not reopened), show Reopen for Revision + View Supplier Portal; else Split Button */}
+        {unresolvedCount === 0 && !data.reopened_for_revision ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={isReopening}
+              onClick={handleReopen}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-1.5 whitespace-nowrap transition-colors cursor-pointer disabled:opacity-50"
+              title="Reopen shipment packet for supplier revision"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-amber-600 ${isReopening ? "animate-spin" : ""}`} />
+              <span>{isReopening ? "Reopening..." : "Reopen for Revision"}</span>
+            </button>
+            <a
+              href={`/upload/${token}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 border border-slate-200 hover:bg-slate-50 rounded-lg px-3 py-1.5 whitespace-nowrap transition-colors"
+              title="Open Supplier Revision Portal in new tab"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
+              <span>View Supplier Portal</span>
+            </a>
+          </div>
         ) : (
           <div className="relative inline-flex items-center rounded-lg shadow-2xs shrink-0 whitespace-nowrap">
             {/* Main Action: Copy Revision Link */}
-            <button
-              type="button"
-              disabled={!token}
-              onClick={handleCopy}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-3 py-2 rounded-l-lg inline-flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
-              title="Copy zero-login supplier revision URL to clipboard"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-300 shrink-0" strokeWidth={2} />
-                  <span className="whitespace-nowrap">Link Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Link2 className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
-                  <span className="whitespace-nowrap">Copy Revision Link</span>
-                </>
-              )}
-            </button>
+              <button
+                type="button"
+                disabled={!token}
+                onClick={handleCopy}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-3 py-2 rounded-l-lg inline-flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap"
+                title="Copy zero-login supplier revision URL to clipboard"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-300 shrink-0" strokeWidth={2} />
+                    <span className="whitespace-nowrap">Link Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="w-3.5 h-3.5 shrink-0" strokeWidth={2} />
+                    <span className="whitespace-nowrap">Copy Revision Link</span>
+                  </>
+                )}
+              </button>
 
-            {/* Attached Right Chevron: Opens WhatsApp / Email Notice Popover */}
-            <button
-              type="button"
-              disabled={!token}
-              onClick={() => setShowPopover((prev) => !prev)}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-2 py-2 rounded-r-lg border-l border-indigo-500 inline-flex items-center transition-all cursor-pointer shrink-0 whitespace-nowrap"
-              title="Options: Copy WhatsApp / Email Discrepancy Notice"
-            >
-              <ChevronDown
-                className={`w-3.5 h-3.5 text-indigo-200 transition-transform ${showPopover ? "rotate-180" : ""}`}
-              />
-            </button>
+              {/* Attached Right Chevron: Opens WhatsApp / Email Notice Popover */}
+              <button
+                type="button"
+                disabled={!token}
+                onClick={() => setShowPopover((prev) => !prev)}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium text-xs px-2 py-2 rounded-r-lg border-l border-indigo-500 inline-flex items-center transition-all cursor-pointer shrink-0 whitespace-nowrap"
+                title="Options: Copy WhatsApp / Email Discrepancy Notice"
+              >
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-indigo-200 transition-transform ${showPopover ? "rotate-180" : ""}`}
+                />
+              </button>
 
             {/* Notice & Share Popover */}
             {showPopover && token && (
@@ -376,21 +416,34 @@ export function TopNavbar({
                   </div>
 
                   {/* Security Status & Regeneration Bar */}
-                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg p-2.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`w-2 h-2 rounded-full ${isRevoked ? "bg-rose-500" : "bg-emerald-500"}`} />
-                      <span className="text-xs font-medium text-slate-700">
-                        {isRevoked ? "Link Revoked by Buyer" : "Link Active · Expires in 7 days"}
-                      </span>
+                  <div className="flex flex-col gap-2 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full ${isRevoked ? "bg-rose-500" : "bg-emerald-500"}`} />
+                        <span className="text-xs font-medium text-slate-700">
+                          {isRevoked ? "Link Revoked by Buyer" : "Link Active · Expires in 7 days"}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={isRotating}
+                        onClick={() => handleRotate(false)}
+                        className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer disabled:opacity-50"
+                      >
+                        {isRotating ? "Updating..." : "Revoke & Regenerate Magic Link"}
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      disabled={isRotating}
-                      onClick={() => handleRotate(false)}
-                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer disabled:opacity-50"
-                    >
-                      {isRotating ? "Updating..." : "Revoke & Regenerate Magic Link"}
-                    </button>
+                    <div className="flex items-center justify-end border-t border-slate-200/60 pt-1.5">
+                      <button
+                        type="button"
+                        disabled={isExtending}
+                        onClick={handleExtendExpiry}
+                        className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 hover:underline cursor-pointer disabled:opacity-50 inline-flex items-center gap-1"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isExtending ? "animate-spin" : ""}`} />
+                        <span>{isExtending ? "Extending..." : "Extend Link Expiry (+7 Days)"}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* 1. Raw Magic Link */}
