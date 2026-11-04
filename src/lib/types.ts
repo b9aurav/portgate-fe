@@ -232,6 +232,7 @@ export interface AuditResponse {
   passed: string[];
   updated_at?: string;
   auto_resolved_in_latest_rev?: string[];
+  decision_trail?: AuditDecisionLogEntry[];
 }
 
 export interface HealthResponse {

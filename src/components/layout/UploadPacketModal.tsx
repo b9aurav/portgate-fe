@@ -30,11 +30,11 @@ export function UploadPacketModal({
   const [poPdf, setPoPdf] = useState<File | null>(null);
   const [invPdf, setInvPdf] = useState<File | null>(null);
   const [plPdf, setPlPdf] = useState<File | null>(null);
-  const [tolerancePct, setTolerancePct] = useState<number>(() => {
-    return typeof defaultTolerance === "number" && !isNaN(defaultTolerance)
+  const safeTolerance =
+    typeof defaultTolerance === "number" && !isNaN(defaultTolerance)
       ? defaultTolerance
       : 5.0;
-  });
+  const [tolerancePct, setTolerancePct] = useState<number>(safeTolerance);
   const [useMock, setUseMock] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -230,7 +230,7 @@ export function UploadPacketModal({
                 min="0"
                 max="25"
                 step="0.5"
-                value={Number.isFinite(tolerancePct) ? tolerancePct : ""}
+                value={tolerancePct ?? 5.0}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value);
                   setTolerancePct(Number.isFinite(val) ? val : 0);

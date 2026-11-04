@@ -80,6 +80,39 @@ function BuyerWorkbenchContent() {
             discrepancies: res.discrepancies || res.items || prev.discrepancies || [],
           }));
           setLastSynced(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+
+          // Rehydrate permanent decision trail from backend or synthesize from resolved items
+          if (res.decision_trail && Array.isArray(res.decision_trail) && res.decision_trail.length > 0) {
+            setDecisionTrail(res.decision_trail);
+          } else {
+            const resolvedItems = (res.discrepancies || res.items || []).filter(
+              (it: any) =>
+                it.resolution_state &&
+                it.resolution_state !== "UNRESOLVED" &&
+                it.resolution_state !== "REVISION_REQUESTED"
+            );
+            if (resolvedItems.length > 0) {
+              const derived: AuditDecisionLogEntry[] = resolvedItems.map((it: any) => ({
+                id: `DEC-${it.id}`,
+                discrepancy_id: it.id,
+                title: it.title,
+                previous_state: "UNRESOLVED",
+                new_state: it.resolution_state,
+                action:
+                  it.resolution_state === "ACCEPTED_EXCEPTION"
+                    ? "ACCEPT_VARIANCE"
+                    : it.resolution_state === "ESCALATED_TO_BROKER"
+                    ? "ESCALATE_BROKER"
+                    : "REQUEST_REVISION",
+                reason_chip: it.resolution_reason_chip || "Authorized Sign-Off",
+                note: it.resolution_note,
+                actor_role: (it.resolved_by?.includes("Supplier") ? "SUPPLIER_PORTAL" : "BUYER_WORKBENCH") as any,
+                actor_name: it.resolved_by || "US Buyer Import Specialist",
+                timestamp: it.resolved_at || "Verified",
+              }));
+              setDecisionTrail(derived);
+            }
+          }
         }
 
         if (list.status === "fulfilled" && Array.isArray(list.value)) {
@@ -204,6 +237,9 @@ function BuyerWorkbenchContent() {
           actor_role: viewMode,
         });
         setData(updated);
+        if (updated.decision_trail && Array.isArray(updated.decision_trail) && updated.decision_trail.length > 0) {
+          setDecisionTrail(updated.decision_trail);
+        }
         setLastSynced(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
         fetchShipmentsList();
         return;

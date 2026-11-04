@@ -237,6 +237,7 @@ export const DEFAULT_AUDIT_PACKET: AuditResponse = {
     warning_count: 1,
     passed_count: 10,
   },
+  decision_trail: [],
 };
 
 /**
