@@ -11,6 +11,10 @@ interface PoDocumentViewProps {
 export function PoDocumentView({ data }: PoDocumentViewProps) {
   const m = data?.metadata || ({} as any);
   const poLines = data?.po_lines || [];
+  const po = data?.packet?.buyer_po;
+  const sellerName = po?.supplier_name || po?.vendor_name || m?.po_supplier_name || "—";
+  const sellerAddress = po?.supplier_address || m?.po_supplier_address || "";
+  const buyerName = po?.buyer_name || m?.importer_name || "Pacific Coast Retail Group LLC";
 
   return (
     <div className="space-y-6 font-mono text-xs">
@@ -28,7 +32,9 @@ export function PoDocumentView({ data }: PoDocumentViewProps) {
           <div className="text-right text-xs space-y-0.5">
             <div>
               <span className="text-slate-500">PO Number: </span>
-              <span className="font-bold text-slate-900">{m?.po_number || "PO-9921"}</span>
+              <Hl id="po-number" className="font-bold text-slate-900">
+                {po?.po_number || m?.po_number || "PO-9921"}
+              </Hl>
             </div>
             <div>
               <span className="text-slate-500">Shipment Ref: </span>
@@ -44,19 +50,25 @@ export function PoDocumentView({ data }: PoDocumentViewProps) {
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-sans">
             SELLER (EXPORTER / BENEFICIARY)
           </div>
-          <div className="font-bold text-slate-900">{m?.exporter_name || "—"}</div>
-          <div className="text-slate-600">{m?.exporter_street || ""}</div>
-          <div className="text-slate-600">
-            {[m?.exporter_city, m?.exporter_state, m?.exporter_postal].filter(Boolean).join(", ")}
-          </div>
-          <div className="text-slate-600">{m?.exporter_country_iso || "IN"}</div>
+          <div className="font-bold text-slate-900">{sellerName}</div>
+          {sellerAddress ? (
+            <div className="text-slate-600 whitespace-pre-line">{sellerAddress}</div>
+          ) : (
+            <>
+              <div className="text-slate-600">{m?.exporter_street || ""}</div>
+              <div className="text-slate-600">
+                {[m?.exporter_city, m?.exporter_state, m?.exporter_postal].filter(Boolean).join(", ")}
+              </div>
+              <div className="text-slate-600">{m?.exporter_country_iso || "IN"}</div>
+            </>
+          )}
         </div>
         <div>
           <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-sans">
             Buyer (Importer / Consignee)
           </div>
-          <div className="font-bold text-slate-900">{m?.importer_name || "—"}</div>
-          <div className="text-slate-600">{m?.importer_city_state || ""}</div>
+          <div className="font-bold text-slate-900">{buyerName}</div>
+          <div className="text-slate-600">{m?.importer_city_state || "Los Angeles, CA"}</div>
           <div className="text-slate-600">United States</div>
         </div>
       </div>

@@ -126,6 +126,10 @@ export interface CartonsOut {
 
 export interface MetadataOut {
   po_number: string;
+  buyer_po_ref?: string;
+  invoice_po_ref?: string;
+  po_supplier_name?: string;
+  po_supplier_address?: string;
   invoice_no: string;
   invoice_date: string;
   packing_list_no: string;
@@ -163,8 +167,12 @@ export interface POLineItem {
 export interface BuyerPO {
   po_number: string;
   buyer_name: string;
+  supplier_name?: string;
+  vendor_name?: string;
+  supplier_address?: string;
   po_date?: string;
   incoterms?: string;
+  currency?: string;
   payment_terms?: string;
   line_items: POLineItem[];
   total_po_value_usd: number;
@@ -185,6 +193,7 @@ export interface CommercialInvoice {
   invoice_number: string;
   invoice_date: string;
   buyer_po_number: string;
+  buyer_po_ref?: string;
   exporter_name: string;
   importer_name: string;
   export_tax_route: string;

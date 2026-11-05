@@ -25,7 +25,7 @@ function SupplierPortalContent() {
   const token = typeof params.token === "string" ? params.token : "";
   const { activeTab, setActiveTab } = useHighlight();
 
-  const [data, setData] = useState<AuditResponse>(DEFAULT_AUDIT_PACKET);
+  const [data, setData] = useState<AuditResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [isReauditing, setIsReauditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +51,34 @@ function SupplierPortalContent() {
     fetchSession();
   }, [fetchSession]);
 
+  if (loading && !data) {
+    return (
+      <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans">
+        <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 relative select-none animate-pulse">
+          <div className="flex items-center gap-4">
+            <div className="h-7 w-28 bg-slate-200 rounded" />
+            <div className="h-5 w-px bg-slate-200 mx-1" />
+            <div className="h-6 w-32 bg-slate-200 rounded" />
+          </div>
+          <div className="h-8 w-44 bg-slate-200 rounded-lg" />
+        </header>
+        <div className="flex flex-1 overflow-hidden">
+          <div className="flex-1 flex flex-col bg-slate-50 border-r border-slate-200 p-6 space-y-4 animate-pulse">
+            <div className="h-10 w-96 bg-slate-200 rounded" />
+            <div className="h-64 bg-slate-200 rounded" />
+            <div className="h-48 bg-slate-200 rounded" />
+          </div>
+          <div className="w-[420px] bg-white p-6 space-y-4 border-l border-slate-200 animate-pulse">
+            <div className="h-44 bg-slate-200 rounded-xl" />
+            <div className="h-10 bg-slate-200 rounded" />
+            <div className="h-28 bg-slate-200 rounded" />
+            <div className="h-28 bg-slate-200 rounded" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!loading && error && (!data || !data.session_token || data.session_token !== token)) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center select-none font-sans">
@@ -75,6 +103,8 @@ function SupplierPortalContent() {
       </div>
     );
   }
+
+  if (!data) return null;
 
   const isRevoked = Boolean(data.link_revoked);
   const isExpired = Boolean(
@@ -187,7 +217,13 @@ function SupplierPortalContent() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs">
             <Lock className="w-3.5 h-3.5 text-indigo-600 shrink-0" strokeWidth={2} />
-            <span className="font-semibold">{m?.exporter_name || "Supplier Revision Portal"}</span>
+            <span className="font-semibold">
+              {data.packet?.buyer_po?.supplier_name ||
+                data.packet?.buyer_po?.vendor_name ||
+                m?.po_supplier_name ||
+                m?.exporter_name ||
+                "Supplier Revision Portal"}
+            </span>
           </div>
         </div>
       </header>

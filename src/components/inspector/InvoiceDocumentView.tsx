@@ -21,6 +21,23 @@ export function InvoiceDocumentView({
   const invWeights = data?.weights?.inv || [];
   const invCartons = data?.cartons?.inv || [];
 
+  const invPoRef =
+    data?.packet?.commercial_invoice?.buyer_po_ref ||
+    data?.packet?.commercial_invoice?.buyer_po_number ||
+    m?.buyer_po_ref ||
+    m?.invoice_po_ref ||
+    m?.po_number ||
+    "—";
+
+  const lockedPoNo = data?.packet?.buyer_po?.po_number || m?.po_number;
+  const isPoMismatch = Boolean(
+    lockedPoNo &&
+    invPoRef &&
+    invPoRef !== "—" &&
+    lockedPoNo !== "—" &&
+    invPoRef.trim().toUpperCase() !== lockedPoNo.trim().toUpperCase()
+  );
+
   const showClearanceRecord =
     isFixed ||
     data?.summary?.status === "CLEAR" ||
@@ -97,8 +114,18 @@ export function InvoiceDocumentView({
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2 bg-slate-50/70 border border-slate-200 rounded-lg p-3 grid grid-cols-2 gap-3 text-xs">
           <div>
-            <span className="text-slate-500">Matched Buyer PO: </span>
-            <span className="font-bold text-slate-900">{m?.po_number || "—"}</span>
+            <span className="text-slate-500">Buyer PO Ref: </span>
+            <Hl id="inv-po-ref" className="font-bold text-slate-900">
+              {invPoRef}
+            </Hl>
+            {isPoMismatch && (
+              <span
+                title={`Mismatched PO: Invoice declares '${invPoRef}' but session is locked to Buyer PO '${lockedPoNo}'`}
+                className="ml-1.5 text-[10px] font-sans font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded inline-flex items-center"
+              >
+                ≠ Locked {lockedPoNo}
+              </span>
+            )}
           </div>
           <div>
             <span className="text-slate-500">Incoterm: </span>

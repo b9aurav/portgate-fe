@@ -28,10 +28,8 @@ function BuyerWorkbenchContent() {
   const { activeTab, setActiveTab } = useHighlight();
 
   // ── Core State ────────────────────────────────────────────────────────────
-  const [data, setData] = useState<AuditResponse>(() => ({
-    ...DEFAULT_AUDIT_PACKET,
-    session_token: token || DEFAULT_AUDIT_PACKET.session_token || "shreeji-po-9921",
-  }));
+  const [data, setData] = useState<AuditResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [shipments, setShipments] = useState<ShipmentListItem[]>([]);
   const [tolerancePct, setTolerancePct] = useState(5.0);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -61,7 +59,10 @@ function BuyerWorkbenchContent() {
 
   const syncSession = useCallback(
     async (targetToken: string) => {
-      if (!targetToken) return;
+      if (!targetToken) {
+        setIsLoading(false);
+        return;
+      }
       try {
         setIsSyncing(true);
         const [updated, list] = await Promise.allSettled([
@@ -74,10 +75,10 @@ function BuyerWorkbenchContent() {
         if (updated.status === "fulfilled") {
           const res = updated.value;
           setData((prev) => ({
-            ...prev,
+            ...(prev || ({} as AuditResponse)),
             ...res,
-            items: res.items || res.discrepancies || prev.items || [],
-            discrepancies: res.discrepancies || res.items || prev.discrepancies || [],
+            items: res.items || res.discrepancies || prev?.items || [],
+            discrepancies: res.discrepancies || res.items || prev?.discrepancies || [],
           }));
           setLastSynced(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
 
@@ -136,6 +137,7 @@ function BuyerWorkbenchContent() {
         console.warn("Failed to sync session:", err);
       } finally {
         setIsSyncing(false);
+        setIsLoading(false);
       }
     },
     []
@@ -209,6 +211,7 @@ function BuyerWorkbenchContent() {
     reasonChip: string,
     note?: string
   ) => {
+    if (!data) return;
     const timestamp = new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -293,6 +296,45 @@ function BuyerWorkbenchContent() {
       },
     });
   };
+
+  if (isLoading && !data) {
+    return (
+      <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans">
+        {/* Skeleton Top Navbar */}
+        <div className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-4">
+            <div className="h-7 w-28 bg-slate-200 rounded" />
+            <div className="h-5 w-px bg-slate-200 mx-1" />
+            <div className="h-6 w-36 bg-slate-200 rounded" />
+            <div className="h-5 w-24 bg-slate-100 rounded" />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-32 bg-slate-200 rounded" />
+            <div className="h-8 w-24 bg-slate-200 rounded" />
+          </div>
+        </div>
+
+        {/* Skeleton Split Pane */}
+        <div className="flex flex-1 overflow-hidden">
+          <div className="flex-1 flex flex-col bg-slate-50 border-r border-slate-200 p-6 space-y-4 animate-pulse">
+            <div className="h-10 w-96 bg-slate-200 rounded" />
+            <div className="h-64 bg-slate-200 rounded-lg" />
+            <div className="h-48 bg-slate-200 rounded-lg" />
+          </div>
+          <div className="w-[420px] bg-white p-6 space-y-4 border-l border-slate-200 animate-pulse">
+            <div className="h-36 bg-slate-200 rounded-xl" />
+            <div className="h-10 bg-slate-200 rounded" />
+            <div className="h-28 bg-slate-200 rounded-lg" />
+            <div className="h-28 bg-slate-200 rounded-lg" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans">
