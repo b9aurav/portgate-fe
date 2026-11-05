@@ -10,6 +10,85 @@ interface DocumentTabsProps {
   data: AuditResponse;
 }
 
+export function itemTouchesDoc(item: any, docKey: "po" | "inv" | "pl"): boolean {
+  const hasCells = Array.isArray(item.cells) && item.cells.length > 0;
+  const hasSourceDocs = Boolean(item.source_doc_a || item.source_doc_b);
+  const hasLocs = Array.isArray(item.locs) && item.locs.length > 0;
+
+  // 1. First priority — Check explicit source_doc_a, source_doc_b, cells, and locs:
+  if (hasCells || hasSourceDocs || hasLocs) {
+    if (docKey === "po") {
+      if (hasCells && item.cells.some((c: string) => typeof c === "string" && c.toLowerCase().startsWith("po-"))) {
+        return true;
+      }
+      if (hasLocs && item.locs.some((loc: any) => (Array.isArray(loc) && loc[0] === "po") || (typeof loc === "string" && (loc.toLowerCase().startsWith("po ") || loc.toLowerCase() === "po")))) {
+        return true;
+      }
+      if (hasSourceDocs) {
+        const text = `${item.source_doc_a || ""} ${item.source_doc_b || ""}`;
+        if (/\bpo\b/i.test(text) || /purchase\s*order/i.test(text)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (docKey === "inv") {
+      if (hasCells && item.cells.some((c: string) => typeof c === "string" && c.toLowerCase().startsWith("inv-"))) {
+        return true;
+      }
+      if (hasLocs && item.locs.some((loc: any) => (Array.isArray(loc) && loc[0] === "inv") || (typeof loc === "string" && (loc.toLowerCase().startsWith("inv ") || loc.toLowerCase() === "inv")))) {
+        return true;
+      }
+      if (hasSourceDocs) {
+        const text = `${item.source_doc_a || ""} ${item.source_doc_b || ""}`;
+        if (/invoice/i.test(text) || /\binv\b/i.test(text)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (docKey === "pl") {
+      if (hasCells && item.cells.some((c: string) => typeof c === "string" && c.toLowerCase().startsWith("pl-"))) {
+        return true;
+      }
+      if (hasLocs && item.locs.some((loc: any) => (Array.isArray(loc) && loc[0] === "pl") || (typeof loc === "string" && (loc.toLowerCase().startsWith("pl ") || loc.toLowerCase() === "pl")))) {
+        return true;
+      }
+      if (hasSourceDocs) {
+        const text = `${item.source_doc_a || ""} ${item.source_doc_b || ""}`;
+        if (/packing\s*list/i.test(text) || /\bpl\b/i.test(text)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    return false;
+  }
+
+  // 2. Fallback ID matching (Only when source_doc_a, source_doc_b, locs, and cells are ALL absent)
+  const id = (item.id || item.rule_id || "").toUpperCase();
+  if (docKey === "po") {
+    if (id.includes("PO-MISMATCH") || id.includes("SUPPLIER-MISMATCH") || id.includes("UNEXPECTED-LINE")) return true;
+    if (id.startsWith("DISC-QTY") || id.startsWith("DISC-PRICE") || id.startsWith("DISC-HS") || id.includes("INCOTERM")) return true;
+  } else if (docKey === "inv") {
+    if (id.includes("INVOICE") || id.includes("INV") || id.includes("CARTON") || id.includes("WEIGHT")) return true;
+    if (id.includes("PO-MISMATCH") || id.includes("SUPPLIER-MISMATCH") || id.includes("UNEXPECTED-LINE")) return true;
+    if (id.startsWith("DISC-QTY") || id.startsWith("DISC-PRICE") || id.startsWith("DISC-HS") || id.includes("INCOTERM") || id.includes("VAGUE")) return true;
+    if (id.includes("MISSING-REQUIRED")) return true;
+  } else if (docKey === "pl") {
+    // Explicit exclusions for Packing List:
+    if (id.includes("SUPPLIER-MISMATCH") || id.includes("PO-MISMATCH")) return false;
+    if (id.includes("WEIGHT-INV")) return false;
+    // Use word boundary regex for PL so it does not match "SUPPLIER"
+    if (id.includes("CARTON") || /\bPL\b/i.test(id) || id.includes("PACKING")) return true;
+    if (id.includes("MISSING-REQUIRED")) return true;
+  }
+  return false;
+}
+
 export function DocumentTabs({ activeTab, setActiveTab, data }: DocumentTabsProps) {
   const allItems = (data.discrepancies && data.discrepancies.length > 0) ? data.discrepancies : (data.items || []);
 
@@ -17,38 +96,6 @@ export function DocumentTabs({ activeTab, setActiveTab, data }: DocumentTabsProp
     !item.resolution_state ||
     item.resolution_state === "UNRESOLVED" ||
     item.resolution_state === "REVISION_REQUESTED";
-
-  const itemTouchesDoc = (item: any, docKey: "po" | "inv" | "pl") => {
-    // 1. Direct cell prefix or locs check
-    if (item.locs?.some(([k]: [string, string]) => k === docKey)) return true;
-    if (item.cells?.some((c: string) => typeof c === "string" && c.startsWith(`${docKey}-`))) return true;
-
-    // 2. Structured source_doc attributes
-    const docMap: Record<string, string[]> = {
-      po: ["BUYER_PO", "PO", "PURCHASE_ORDER"],
-      inv: ["COMMERCIAL_INVOICE", "INVOICE", "INV"],
-      pl: ["PACKING_LIST", "PL"],
-    };
-    const validNames = docMap[docKey];
-    if (item.source_doc_a && validNames.includes(item.source_doc_a.toUpperCase())) return true;
-    if (item.source_doc_b && validNames.includes(item.source_doc_b.toUpperCase())) return true;
-
-    // 3. Fallback semantic heuristics by rule/ID prefix
-    const id = (item.id || item.rule_id || "").toUpperCase();
-    if (docKey === "po") {
-      if (id.includes("PO-MISMATCH") || id.includes("SUPPLIER-MISMATCH") || id.includes("UNEXPECTED-LINE")) return true;
-      if (id.startsWith("DISC-QTY") || id.startsWith("DISC-PRICE") || id.startsWith("DISC-HS") || id.includes("INCOTERM")) return true;
-    } else if (docKey === "inv") {
-      if (id.includes("INVOICE") || id.includes("INV") || id.includes("CARTON") || id.includes("WEIGHT")) return true;
-      if (id.includes("PO-MISMATCH") || id.includes("SUPPLIER-MISMATCH") || id.includes("UNEXPECTED-LINE")) return true;
-      if (id.startsWith("DISC-QTY") || id.startsWith("DISC-PRICE") || id.startsWith("DISC-HS") || id.includes("INCOTERM") || id.includes("VAGUE")) return true;
-      if (id.includes("MISSING-REQUIRED")) return true;
-    } else if (docKey === "pl") {
-      if (id.includes("CARTON") || id.includes("WEIGHT") || id.includes("PL") || id.includes("PACKING")) return true;
-      if (id.includes("MISSING-REQUIRED")) return true;
-    }
-    return false;
-  };
 
   // Compute unresolved discrepancy counts per document
   const countForDoc = (docKey: "po" | "inv" | "pl") => {

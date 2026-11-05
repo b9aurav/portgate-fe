@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import BuyerWorkbenchPage from "../[token]/page";
 import * as api from "@/lib/api";
@@ -276,4 +276,44 @@ describe("Buyer Exception Workbench (/shipments/[token])", () => {
     // Summary Card displays AWAITING SUPPLIER REVISION
     expect(screen.getByText("AWAITING SUPPLIER REVISION")).toBeInTheDocument();
   });
+
+  it("stops background polling immediately when getShipment returns 404 (BUG-04 Regression Test)", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "setTimeout"] });
+    let callCount = 0;
+    vi.spyOn(api, "getShipment").mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return mockActiveAuditV1;
+      }
+      const err: any = new Error("404 Not Found");
+      err.status = 404;
+      throw err;
+    });
+
+    render(<BuyerWorkbenchPage />);
+
+    // Allow initial mount and loadData to resolve
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50);
+    });
+    expect(callCount).toBe(1);
+
+    // Advance 3000ms to trigger the first poll interval (which will receive 404)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    expect(callCount).toBe(2);
+
+    // Verify warning toast/banner is displayed
+    expect(screen.getByText(/is no longer active/i)).toBeInTheDocument();
+
+    // Advance another 6000ms: callCount must NOT increase because polling was stopped!
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000);
+    });
+    expect(callCount).toBe(2);
+
+    vi.useRealTimers();
+  });
 });
+

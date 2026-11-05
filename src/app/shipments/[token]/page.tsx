@@ -10,6 +10,7 @@ import { DocumentCanvas } from "@/components/inspector/DocumentCanvas";
 import { AuditSummaryCard } from "@/components/workbench/AuditSummaryCard";
 import { DiscrepancyQueue } from "@/components/workbench/DiscrepancyQueue";
 import { ExportModal } from "@/components/ExportModal";
+import { AlertOctagon } from "lucide-react";
 import { DEFAULT_AUDIT_PACKET } from "@/lib/defaultPacket";
 import { getSession, getShipment, getShipments, patchDiscrepancy } from "@/lib/api";
 import type {
@@ -37,9 +38,20 @@ function BuyerWorkbenchContent() {
   const [decisionTrail, setDecisionTrail] = useState<AuditDecisionLogEntry[]>([]);
   const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [bannerMessage, setBannerMessage] = useState<string | null>(null);
 
   const viewMode = "BUYER_WORKBENCH" as const;
   const activeTokenRef = useRef<string>(token);
+  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isPollingStoppedRef = useRef(false);
+
+  const stopPolling = useCallback(() => {
+    isPollingStoppedRef.current = true;
+    if (pollingTimerRef.current) {
+      clearInterval(pollingTimerRef.current);
+      pollingTimerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     activeTokenRef.current = token;
@@ -71,6 +83,44 @@ function BuyerWorkbenchContent() {
         ]);
 
         if (targetToken !== activeTokenRef.current) return;
+
+        if (updated.status === "rejected") {
+          const reason: any = updated.reason;
+          const statusCode =
+            reason?.status ??
+            (typeof reason?.message === "string" && reason.message.includes("404")
+              ? 404
+              : typeof reason?.message === "string" && reason.message.includes("403")
+              ? 403
+              : null);
+
+          if (statusCode === 404 || statusCode === 403) {
+            console.warn(`Shipment session '${targetToken}' returned ${statusCode}. Stopping background polling.`);
+            stopPolling();
+
+            // Try to find if this shipment was rotated to a new session_token
+            if (list.status === "fulfilled" && Array.isArray(list.value)) {
+              setShipments(list.value);
+              const poNum = data?.packet?.buyer_po?.po_number;
+              const matching = list.value.find(
+                (s) => s.session_token !== targetToken && poNum && s.po_number === poNum
+              );
+              if (matching) {
+                setBannerMessage(`Session was rotated. Redirecting to active session '${matching.session_token}'...`);
+                setTimeout(() => {
+                  router.replace(`/shipments/${matching.session_token}`);
+                }, 1200);
+                return;
+              }
+            }
+
+            setBannerMessage(`Shipment session '${targetToken}' is no longer active (rotated, expired, or deleted). Redirecting to queue...`);
+            setTimeout(() => {
+              router.push("/");
+            }, 2500);
+            return;
+          }
+        }
 
         if (updated.status === "fulfilled") {
           const res = updated.value;
@@ -140,7 +190,7 @@ function BuyerWorkbenchContent() {
         setIsLoading(false);
       }
     },
-    []
+    [data?.packet?.buyer_po?.po_number, router, stopPolling]
   );
 
   // ── Initial Fetch on Mount or Token Change ────────────────────────────────
@@ -155,17 +205,27 @@ function BuyerWorkbenchContent() {
   // ── Background Polling & Window Focus ─────────────────────────────────────
   useEffect(() => {
     if (!token) return;
+    isPollingStoppedRef.current = false;
 
-    const onFocus = () => syncSession(token);
+    const onFocus = () => {
+      if (!isPollingStoppedRef.current) {
+        syncSession(token);
+      }
+    };
     window.addEventListener("focus", onFocus);
 
-    const timer = setInterval(() => {
-      syncSession(token);
+    pollingTimerRef.current = setInterval(() => {
+      if (!isPollingStoppedRef.current) {
+        syncSession(token);
+      }
     }, POLL_INTERVAL_MS);
 
     return () => {
       window.removeEventListener("focus", onFocus);
-      clearInterval(timer);
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
     };
   }, [token, syncSession]);
 
@@ -332,12 +392,41 @@ function BuyerWorkbenchContent() {
     );
   }
 
+  if (!data && bannerMessage) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center select-none font-sans">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-8 flex flex-col items-center">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-4">
+            <AlertOctagon className="w-6 h-6" strokeWidth={1.75} />
+          </div>
+          <h2 className="text-base font-bold text-slate-900 mb-1.5">
+            Session Rotated or Inactive
+          </h2>
+          <p className="text-xs text-slate-500 leading-relaxed mb-6">
+            {bannerMessage}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!data) {
     return null;
   }
 
   return (
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans">
+      {bannerMessage && (
+        <div
+          data-testid="session-status-banner"
+          className="bg-amber-500 text-white text-xs font-semibold px-4 py-2 flex items-center justify-between shadow-md z-50 animate-fadeIn"
+        >
+          <div className="flex items-center gap-2">
+            <AlertOctagon className="w-4 h-4 shrink-0" />
+            <span>{bannerMessage}</span>
+          </div>
+        </div>
+      )}
       {/* ── Top Navbar with Breadcrumb Switcher ── */}
       <TopNavbar
         data={data}
@@ -347,6 +436,7 @@ function BuyerWorkbenchContent() {
         onOpenUploadModal={() => setUploadModalOpen(true)}
         shipments={shipments}
         currentSessionToken={token || data.session_token}
+        onSessionUpdate={(updated) => setData(updated)}
       />
 
       {/* ── Main Workspace: 100% Full-Width Split Pane ── */}

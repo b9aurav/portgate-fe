@@ -33,6 +33,7 @@ interface TopNavbarProps {
   onOpenUploadModal: () => void;
   shipments?: ShipmentListItem[];
   currentSessionToken?: string;
+  onSessionUpdate?: (updated: AuditResponse) => void;
 }
 
 export function TopNavbar({
@@ -43,6 +44,7 @@ export function TopNavbar({
   onOpenUploadModal,
   shipments = [],
   currentSessionToken,
+  onSessionUpdate,
 }: TopNavbarProps) {
   const router = useRouter();
   const { user, signOut } = useAuth();
@@ -64,10 +66,13 @@ export function TopNavbar({
     setIsRotating(true);
     try {
       const updated = await rotateMagicLink(token, revoke);
+      if (onSessionUpdate) {
+        onSessionUpdate(updated);
+      }
       if (revoke) {
         onSync();
       } else if (updated.session_token && updated.session_token !== token) {
-        router.push(`/shipments/${updated.session_token}`);
+        router.replace(`/shipments/${updated.session_token}`);
       } else {
         onSync();
       }
@@ -82,7 +87,10 @@ export function TopNavbar({
     if (!token || isReopening) return;
     setIsReopening(true);
     try {
-      await reopenShipment(token);
+      const updated = await reopenShipment(token);
+      if (onSessionUpdate) {
+        onSessionUpdate(updated);
+      }
       onSync();
     } catch (err: any) {
       alert(err.message || "Failed to reopen shipment");
@@ -95,7 +103,10 @@ export function TopNavbar({
     if (!token || isExtending) return;
     setIsExtending(true);
     try {
-      await extendLinkExpiry(token, 7);
+      const updated = await extendLinkExpiry(token, 7);
+      if (onSessionUpdate) {
+        onSessionUpdate(updated);
+      }
       onSync();
     } catch (err: any) {
       alert(err.message || "Failed to extend link expiry");
