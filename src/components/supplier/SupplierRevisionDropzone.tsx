@@ -41,6 +41,19 @@ export function SupplierRevisionDropzone({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [invDragging, setInvDragging] = useState(false);
   const [plDragging, setPlDragging] = useState(false);
+  const [reAuditElapsed, setReAuditElapsed] = useState(0);
+
+  React.useEffect(() => {
+    let t: NodeJS.Timeout | null = null;
+    if (isLoading) {
+      t = setInterval(() => setReAuditElapsed((prev) => prev + 1), 1000);
+    } else {
+      setReAuditElapsed(0);
+    }
+    return () => {
+      if (t) clearInterval(t);
+    };
+  }, [isLoading]);
 
   // If shipment has 0 unresolved discrepancies and is not reopened by buyer, lock the portal and show verified card
   if (unresolvedCount === 0 && !isReopened) {
@@ -171,13 +184,12 @@ export function SupplierRevisionDropzone({
             const file = e.dataTransfer.files?.[0];
             if (file) setInvoiceFile(file);
           }}
-          className={`relative flex flex-col justify-between p-2.5 rounded-xl border border-dashed transition-all cursor-pointer min-h-[78px] ${
-            invoiceFile
+          className={`relative flex flex-col justify-between p-2.5 rounded-xl border border-dashed transition-all cursor-pointer min-h-[78px] ${invoiceFile
               ? "border-emerald-300 bg-emerald-50/25 hover:border-emerald-400"
               : invDragging
-              ? "border-indigo-400 bg-indigo-50/40"
-              : "border-slate-200 bg-slate-50/50 hover:border-indigo-400 hover:bg-indigo-50/30"
-          }`}
+                ? "border-indigo-400 bg-indigo-50/40"
+                : "border-slate-200 bg-slate-50/50 hover:border-indigo-400 hover:bg-indigo-50/30"
+            }`}
         >
           <input
             type="file"
@@ -248,13 +260,12 @@ export function SupplierRevisionDropzone({
             const file = e.dataTransfer.files?.[0];
             if (file) setPlFile(file);
           }}
-          className={`relative flex flex-col justify-between p-2.5 rounded-xl border border-dashed transition-all cursor-pointer min-h-[78px] ${
-            plFile
+          className={`relative flex flex-col justify-between p-2.5 rounded-xl border border-dashed transition-all cursor-pointer min-h-[78px] ${plFile
               ? "border-emerald-300 bg-emerald-50/25 hover:border-emerald-400"
               : plDragging
-              ? "border-indigo-400 bg-indigo-50/40"
-              : "border-slate-200 bg-slate-50/50 hover:border-indigo-400 hover:bg-indigo-50/30"
-          }`}
+                ? "border-indigo-400 bg-indigo-50/40"
+                : "border-slate-200 bg-slate-50/50 hover:border-indigo-400 hover:bg-indigo-50/30"
+            }`}
         >
           <input
             type="file"
@@ -321,21 +332,46 @@ export function SupplierRevisionDropzone({
         </div>
       )}
 
+      {/* Active Re-Audit Status Banner */}
+      {isLoading && (
+        <div className="p-3 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-2 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1.5 font-semibold text-indigo-950">
+              <RefreshCw className="w-3.5 h-3.5 text-indigo-600 animate-spin shrink-0" />
+              <span>
+                {reAuditElapsed < 4
+                  ? "Uploading revised documents..."
+                  : reAuditElapsed < 12
+                    ? "Comparing revisions against PO & Packing List..."
+                    : "Waking up Render backend container (~30–45s)..."}
+              </span>
+            </div>
+            <span className="font-mono text-[11px] font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded shrink-0">
+              {reAuditElapsed}s
+            </span>
+          </div>
+          {reAuditElapsed >= 6 && (
+            <p className="text-[11px] text-indigo-800 leading-relaxed bg-white/70 p-2 rounded-lg border border-indigo-100">
+              💡 <strong>Free Tier Spin-Up:</strong> If the backend was inactive, Render takes ~30–45s on first wake-up. Please hold on!
+            </p>
+          )}
+        </div>
+      )}
+
       {/* High-Contrast Action Button */}
       <button
         type="button"
         onClick={() => handleReAudit(false)}
         disabled={!hasFiles || isLoading}
-        className={`w-full font-medium py-2 px-3.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all ${
-          hasFiles
+        className={`w-full font-medium py-2 px-3.5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all ${hasFiles
             ? "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm cursor-pointer"
             : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
-        } ${isLoading ? "opacity-75 cursor-wait" : ""}`}
+          } ${isLoading ? "opacity-75 cursor-wait" : ""}`}
       >
         {isLoading ? (
           <>
             <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" strokeWidth={2} />
-            <span>Re-Auditing Against Locked PO...</span>
+            <span>Re-Auditing Against Locked PO ({reAuditElapsed}s)...</span>
           </>
         ) : (
           <>

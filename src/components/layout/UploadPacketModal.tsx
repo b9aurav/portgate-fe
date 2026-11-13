@@ -51,13 +51,12 @@ function DropzoneCard({
         const droppedFile = e.dataTransfer.files?.[0];
         if (droppedFile) onFileSelect(droppedFile);
       }}
-      className={`block relative border-2 border-dashed rounded-xl p-3.5 transition cursor-pointer select-none ${
-        file
+      className={`block relative border-2 border-dashed rounded-xl p-3.5 transition cursor-pointer select-none ${file
           ? "border-emerald-300 bg-emerald-50/40 hover:bg-emerald-50/60"
           : isDragOver
-          ? "border-indigo-500 bg-indigo-50/50"
-          : "border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30"
-      }`}
+            ? "border-indigo-500 bg-indigo-50/50"
+            : "border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/30"
+        }`}
     >
       <input
         type="file"
@@ -137,7 +136,23 @@ export function UploadPacketModal({
       : 5.0;
   const [tolerancePct, setTolerancePct] = useState<number>(safeTolerance);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isSubmitting) {
+      setElapsedSeconds(0);
+      timer = setInterval(() => {
+        setElapsedSeconds((s) => s + 1);
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isSubmitting]);
 
   useEffect(() => {
     if (typeof defaultTolerance === "number" && !isNaN(defaultTolerance)) {
@@ -283,6 +298,39 @@ export function UploadPacketModal({
             </div>
           )}
 
+          {/* Active Audit Progress & Free-Tier Wake-Up Indicator */}
+          {isSubmitting && (
+            <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-3 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2 font-semibold text-indigo-950">
+                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+                  <span>
+                    {elapsedSeconds < 4
+                      ? "1/3 Uploading 3 PDF documents to engine..."
+                      : elapsedSeconds < 10
+                        ? "2/3 Extracting line items, weights & tariff codes..."
+                        : elapsedSeconds < 22
+                          ? "3/3 Running Gemini AI 3-way compliance linting..."
+                          : "Waking up Render backend container (~30–50s)..."}
+                  </span>
+                </div>
+                <span className="font-mono text-xs font-semibold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-md shrink-0">
+                  {elapsedSeconds}s elapsed
+                </span>
+              </div>
+
+              {/* Animated Progress Bar */}
+              <div className="w-full bg-indigo-200/60 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-indigo-600 h-1.5 rounded-full transition-all duration-500 ease-out"
+                  style={{
+                    width: `${Math.min(95, 12 + elapsedSeconds * (elapsedSeconds < 15 ? 5 : 1))}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
@@ -301,7 +349,7 @@ export function UploadPacketModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
-                  <span>Auditing 3-Document Packet...</span>
+                  <span>Auditing 3-Document Packet ({elapsedSeconds}s)...</span>
                 </>
               ) : (
                 <>
