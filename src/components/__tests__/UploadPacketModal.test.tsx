@@ -109,5 +109,39 @@ describe("UploadPacketModal Component", () => {
     expect(mockOnSuccess).toHaveBeenCalledWith(mockActiveAuditV1);
     expect(mockOnClose).toHaveBeenCalled();
   });
+
+  it("handles FastAPI 422 array error objects cleanly without crashing React (CHAOS-06)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.runAudit).mockRejectedValueOnce({
+      status: 422,
+      detail: [
+        { loc: ["body", "tolerance_pct"], msg: "Input should be between 0 and 25" },
+      ],
+    });
+
+    const { container } = render(
+      <UploadPacketModal
+        isOpen={true}
+        onClose={mockOnClose}
+        onSuccess={mockOnSuccess}
+      />
+    );
+
+    const poFile = new File(["po content"], "po.pdf", { type: "application/pdf" });
+    const invFile = new File(["inv content"], "inv.pdf", { type: "application/pdf" });
+    const plFile = new File(["pl content"], "pl.pdf", { type: "application/pdf" });
+
+    const fileInputs = container.querySelectorAll<HTMLInputElement>('input[type="file"]');
+    await user.upload(fileInputs[0], poFile);
+    await user.upload(fileInputs[1], invFile);
+    await user.upload(fileInputs[2], plFile);
+
+    const submitBtn = screen.getByRole("button", { name: /execute 3-way audit/i });
+    await user.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Input should be between 0 and 25/i)).toBeInTheDocument();
+    });
+  });
 });
 

@@ -32,7 +32,19 @@ async function handleResponse<T>(res: Response): Promise<T> {
     let detail = "An error occurred";
     try {
       const errJson = await res.json();
-      detail = errJson.detail || JSON.stringify(errJson);
+      if (typeof errJson.detail === "string") {
+        detail = errJson.detail;
+      } else if (Array.isArray(errJson.detail)) {
+        detail = errJson.detail
+          .map((item: any) => item.msg || item.message || JSON.stringify(item))
+          .join(", ");
+      } else if (errJson.detail && typeof errJson.detail === "object") {
+        detail = errJson.detail.msg || errJson.detail.message || JSON.stringify(errJson.detail);
+      } else if (errJson.message && typeof errJson.message === "string") {
+        detail = errJson.message;
+      } else {
+        detail = JSON.stringify(errJson);
+      }
     } catch {
       detail = await res.text();
     }

@@ -25,9 +25,11 @@ export function ExportModal({
   isOpen,
   onClose,
   data,
-  decisionTrail = [],
+  decisionTrail,
 }: ExportModalProps) {
   const [view, setView] = useState<ExportView>("broker_csv");
+
+  const effectiveDecisions = decisionTrail || data?.decision_trail || [];
 
   if (!isOpen) return null;
 
@@ -124,7 +126,7 @@ export function ExportModal({
           )}
           {view === "isf_worksheet" && <ISFPreCheckView data={data} />}
           {view === "decision_log" && (
-            <DecisionLogView data={data} decisions={decisionTrail} />
+            <DecisionLogView data={data} decisions={effectiveDecisions} />
           )}
         </div>
 
@@ -205,11 +207,16 @@ function BrokerHandoffView({
 function ISFPreCheckView({ data }: { data: AuditResponse }) {
   const m = data?.metadata || ({} as any);
 
-  const hsRoots = (data?.po_lines || []).map((line) => {
-    const cleaned = (line?.hts || "").replace(/[\s.\-]/g, "");
-    const root = cleaned.substring(0, 6);
-    return root.length >= 6 ? root.substring(0, 4) + "." + root.substring(4, 6) : root;
-  });
+  const hsRoots = [
+    ...(data?.po_lines || []).map((l) => l?.hts),
+    ...(data?.inv_lines || []).map((l) => (l as any)?.hsn),
+  ]
+    .filter(Boolean)
+    .map((code) => {
+      const cleaned = String(code).replace(/[\s.\-]/g, "");
+      const root = cleaned.substring(0, 6);
+      return root.length >= 6 ? root.substring(0, 4) + "." + root.substring(4, 6) : root;
+    });
 
   return (
     <div className="space-y-4 font-mono text-xs">
@@ -230,9 +237,9 @@ function ISFPreCheckView({ data }: { data: AuditResponse }) {
         <InfoRow label="5. Container Stuffing Location" value={`${m.exporter_city || "Surat"}, Gujarat, India (IN)`} />
         <InfoRow label="6. Consolidator (Stuffer)" value={m.exporter_name || "—"} />
         <InfoRow label="7. Importer of Record No." value="On File with CBP (Pacific Coast Retail Group LLC)" />
-        <InfoRow label="8. Consignee Number" value={`${m.exporter_gstin || "24AABCS1429B1Z5"} / US IOR EIN`} />
+        <InfoRow label="8. Consignee Number" value="US IRS EIN on File (Pacific Coast Retail Group LLC)" />
         <InfoRow label="9. Country of Origin" value="India (ISO: IN)" />
-        <InfoRow label="10. PO-Matched HTSUS (Consistency Checked)" value={Array.from(new Set(hsRoots)).filter(Boolean).join(" · ") || "6109.10"} />
+        <InfoRow label="10. PO-Matched HTSUS (Consistency Checked)" value={Array.from(new Set(hsRoots)).filter((r) => r.length >= 4).join(" · ") || "6109.10"} />
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 font-sans leading-relaxed">
@@ -327,6 +334,7 @@ function DecisionLogView({
                   <th className="px-3 py-2 whitespace-nowrap">Action</th>
                   <th className="px-3 py-2 whitespace-nowrap">Reason Chip</th>
                   <th className="px-3 py-2 whitespace-nowrap">Signatory</th>
+                  <th className="px-3 py-2 whitespace-nowrap">Sign-Off Note / Justification</th>
                   <th className="px-3 py-2 whitespace-nowrap">Digest / Hash Chain</th>
                 </tr>
               </thead>
@@ -368,6 +376,9 @@ function DecisionLogView({
                     <td className="px-3 py-2 text-slate-600 text-[11px] whitespace-nowrap">
                       {entry.actor_name}
                     </td>
+                    <td className="px-3 py-2 text-slate-700 text-[11px] max-w-[240px] truncate" title={entry.note || ""}>
+                      {entry.note ? entry.note : "—"}
+                    </td>
                     <td className="px-3 py-2 font-mono text-[10px] text-slate-500 whitespace-nowrap">
                       {(entry as any).entry_hash ? (
                         <span
@@ -400,9 +411,20 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function formatCSVCell(val: any): string {
+  if (val === null || val === undefined) return '""';
+  let s = String(val);
+  // Mitigate CSV Formula Injection (CWE-1236): Prepend single quote if cell starts with dangerous prefixes
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = `'${s}`;
+  }
+  s = s.replace(/"/g, '""');
+  return `"${s}"`;
+}
+
 function generateBrokerHandoffCSV(data: AuditResponse): string {
   const m = data.metadata || ({} as any);
-  const rows = [
+  const rows: string[][] = [
     [
       "SHIPMENT_REF",
       "CBP_MID",
@@ -422,31 +444,77 @@ function generateBrokerHandoffCSV(data: AuditResponse): string {
     ],
   ];
 
-  (data.po_lines || []).forEach((line, idx) => {
-    const invLine = data.inv_lines?.[idx];
-    const weight = data.weights?.inv?.[idx];
-    const netKg = Array.isArray(weight) ? weight[0] : 0;
-    const grossKg = Array.isArray(weight) ? weight[1] : 0;
-    const ctns = data.cartons?.inv?.[idx] || 0;
+  const invLines = data.inv_lines || [];
+  const poLines = data.po_lines || [];
 
-    rows.push([
-      data.shipment_ref || "SHP-2026-8841",
-      data.mid_code || "",
-      `"${m.importer_name || "Pacific Coast Retail Group"}"`,
-      `"${m.exporter_name || "Shreeji Textiles Pvt Ltd"}"`,
-      m.port_of_loading || "INMUN1",
-      m.port_of_discharge || "USLAX",
-      (idx + 1).toString(),
-      line.sku || "",
-      line.hts || "",
-      (line.qty || 0).toString(),
-      (line.price || 0).toFixed(2),
-      ((invLine?.amount ?? (line.qty || 0) * (line.price || 0))).toFixed(2),
-      netKg.toFixed(2),
-      grossKg.toFixed(2),
-      ctns.toString(),
-    ]);
-  });
+  if (invLines.length > 0) {
+    invLines.forEach((invLine, idx) => {
+      // Reconcile to Buyer PO line item
+      const poLine =
+        poLines.find((p, pIdx) => {
+          if (invLine.po_line_ref != null) {
+            return pIdx + 1 === invLine.po_line_ref;
+          }
+          return p.sku === (invLine as any).sku;
+        }) || poLines[idx];
 
-  return rows.map((r) => r.join(",")).join("\n");
+      const weight = data.weights?.inv?.[idx];
+      const netKg = Array.isArray(weight)
+        ? weight[0]
+        : (invLine as any).net_wt_kg ?? 0;
+      const grossKg = Array.isArray(weight)
+        ? weight[1]
+        : (invLine as any).gross_wt_kg ?? 0;
+      const ctns = data.cartons?.inv?.[idx] ?? (invLine as any).ctns ?? 0;
+
+      const sku = poLine ? (poLine.sku || `SKU-${idx + 1}`) : "UNREFERENCED-PO";
+      const hts = poLine ? (poLine.hts || (invLine as any).hsn || "") : ((invLine as any).hsn || "");
+      const unitPrice = poLine ? poLine.price : (invLine.rate ?? 0);
+      const lineTotal =
+        (invLine as any).amount ??
+        (invLine as any).line_total ??
+        ((invLine.qty || 0) * (invLine.rate || 0));
+
+      rows.push([
+        data.shipment_ref || "SHP-2026-8841",
+        data.mid_code || "",
+        m.importer_name || "Pacific Coast Retail Group",
+        m.exporter_name || "Shreeji Textiles Pvt Ltd",
+        m.port_of_loading || "INMUN1",
+        m.port_of_discharge || "USLAX",
+        (idx + 1).toString(),
+        sku,
+        hts,
+        (invLine.qty || 0).toString(),
+        Number(unitPrice || 0).toFixed(2),
+        Number(lineTotal || 0).toFixed(2),
+        Number(netKg || 0).toFixed(2),
+        Number(grossKg || 0).toFixed(2),
+        ctns.toString(),
+      ]);
+    });
+  } else {
+    // Fallback if invoice lines empty
+    poLines.forEach((line, idx) => {
+      rows.push([
+        data.shipment_ref || "SHP-2026-8841",
+        data.mid_code || "",
+        m.importer_name || "Pacific Coast Retail Group",
+        m.exporter_name || "Shreeji Textiles Pvt Ltd",
+        m.port_of_loading || "INMUN1",
+        m.port_of_discharge || "USLAX",
+        (idx + 1).toString(),
+        line.sku || "",
+        line.hts || "",
+        (line.qty || 0).toString(),
+        Number(line.price || 0).toFixed(2),
+        ((line.qty || 0) * (line.price || 0)).toFixed(2),
+        "0.00",
+        "0.00",
+        "0",
+      ]);
+    });
+  }
+
+  return rows.map((r) => r.map(formatCSVCell).join(",")).join("\n");
 }

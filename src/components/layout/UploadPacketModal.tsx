@@ -174,7 +174,17 @@ export function UploadPacketModal({
       setInvoiceFile(null);
       setPackingListFile(null);
     } catch (err: any) {
-      setError(err?.detail || err?.message || "Audit request failed");
+      let msg = "Audit request failed";
+      if (typeof err?.detail === "string") {
+        msg = err.detail;
+      } else if (Array.isArray(err?.detail)) {
+        msg = err.detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(", ");
+      } else if (typeof err?.message === "string") {
+        msg = err.message;
+      } else if (err?.detail) {
+        msg = JSON.stringify(err.detail);
+      }
+      setError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -257,7 +267,7 @@ export function UploadPacketModal({
                 value={tolerancePct ?? 5.0}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value);
-                  setTolerancePct(Number.isFinite(val) ? val : 0);
+                  setTolerancePct(Number.isFinite(val) ? Math.min(25, Math.max(0, val)) : 0);
                 }}
                 className="w-16 px-2.5 py-1 text-xs font-mono font-semibold text-right bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
@@ -269,7 +279,7 @@ export function UploadPacketModal({
           {error && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-800">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" strokeWidth={2} />
-              <span>{error}</span>
+              <span>{typeof error === "string" ? error : JSON.stringify(error)}</span>
             </div>
           )}
 

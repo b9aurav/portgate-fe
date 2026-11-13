@@ -112,6 +112,7 @@ export interface InvLineOut {
   qty: number;
   rate: number;
   amount?: number;
+  po_line_ref?: number;
 }
 
 export interface WeightsOut {

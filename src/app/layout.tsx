@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PortGate — Pre-Shipment 3-Way Customs Compliance Engine",
+  title: "PortGate",
   description: "Deterministic compliance auditing for India→US export shipments. Verify PO, Invoice, and Packing List against CBP rules in seconds.",
   icons: {
     icon: [
